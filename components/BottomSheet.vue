@@ -27,10 +27,10 @@ const emit = defineEmits<{ (e: 'update:snap', value: SheetSnap): void }>()
 
 const sheetEl = ref<HTMLElement | null>(null)
 const dragging = ref(false)
-const translateY = ref(0) // px depuis le haut de la fenêtre
-const animating = ref(true)
+const translateY = ref(0) // px depuis le haut de la fenêtre (top de la sheet)
+const animating = ref(false) // pas d'anim avant le 1er applySnap (évite le flash initial)
+const viewportH = ref(0)
 
-let viewportH = 0
 let snapPositions: Record<SheetSnap, number> = { peek: 0, mid: 0, full: 0 }
 
 let dragStartY = 0
@@ -41,11 +41,11 @@ let velocity = 0
 let activePointerId: number | null = null
 
 function computeSnaps(): void {
-  viewportH = window.innerHeight
+  viewportH.value = window.innerHeight
   snapPositions = {
-    peek: viewportH - props.peekPx,
-    mid: Math.round(viewportH * 0.45),
-    full: Math.round(viewportH * 0.1),
+    peek: viewportH.value - props.peekPx,
+    mid: Math.round(viewportH.value * 0.45),
+    full: Math.round(viewportH.value * 0.1),
   }
 }
 
@@ -142,21 +142,18 @@ watch(
 
 const scrimVisible = computed(() => props.snap === 'full')
 
-const transform = computed(() => `translate3d(0, ${translateY.value}px, 0)`)
-const transition = computed(() =>
-  animating.value
-    ? 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1)'
-    : 'none',
-)
-
 /**
- * Hauteur visible de la sheet sous le drag handle.
- * Indispensable car la sheet est `h-dvh` translatée vers le bas : sans cap,
- * le scroll container déborde sous le viewport et le contenu en fin (ex. CTA
- * sticky) devient inaccessible.
+ * On anime maintenant `height` plutôt que `transform: translateY` :
+ *  - Plus de transform-context qui casserait `position: fixed/sticky` des enfants.
+ *  - Layout flexbox stable : poignée → scroll flex-1 → footer optionnel.
+ *  - `height` animée via CSS transition (260ms ease-out-soft).
  */
-const scrollAreaHeight = computed(
-  () => `calc(100dvh - ${Math.round(translateY.value)}px - 2rem)`,
+const sheetVisibleHeight = computed(() => {
+  if (viewportH.value === 0) return '0px'
+  return `${Math.max(0, Math.round(viewportH.value - translateY.value))}px`
+})
+const transition = computed(() =>
+  animating.value ? 'height 260ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
 )
 
 function onResize(): void {
@@ -199,15 +196,15 @@ function onScrimClick(): void {
 
   <section
     ref="sheetEl"
-    class="fixed inset-x-0 top-0 z-40 h-dvh w-full rounded-t-sheet bg-cream-50 shadow-sheet will-change-transform"
-    :style="{ transform, transition }"
+    class="fixed inset-x-0 bottom-0 z-40 flex w-full flex-col rounded-t-sheet bg-cream-50 shadow-sheet will-change-[height]"
+    :style="{ height: sheetVisibleHeight, transition }"
     role="dialog"
     aria-modal="false"
     aria-label="Détails du parcours"
   >
-    <!-- Zone draggable : poignée + header (les ~56 premiers px) -->
+    <!-- Zone draggable : poignée -->
     <div
-      class="cursor-grab touch-none select-none py-3 active:cursor-grabbing"
+      class="shrink-0 cursor-grab touch-none select-none py-3 active:cursor-grabbing"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
@@ -219,12 +216,18 @@ function onScrimClick(): void {
       <span class="drag-handle block" />
     </div>
 
-    <!-- Contenu scrollable de la sheet (hauteur = portion visible sous le drag handle) -->
-    <div
-      class="overflow-y-auto overscroll-contain px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"
-      :style="{ height: scrollAreaHeight }"
-    >
+    <!-- Contenu scrollable, occupe l'espace restant entre poignée et footer -->
+    <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">
       <slot />
+    </div>
+
+    <!-- Footer optionnel (toujours visible, sous la zone scroll) -->
+    <div
+      v-if="$slots.footer"
+      class="shrink-0 border-t border-cream-200 bg-cream-50 px-4 pt-3"
+      style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
+    >
+      <slot name="footer" />
     </div>
   </section>
 </template>

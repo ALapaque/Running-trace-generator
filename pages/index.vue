@@ -38,6 +38,11 @@ let abort: AbortController | null = null
 const pipeline = useRoutePipeline()
 const gpx = useGpxExport()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
+const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
+
+function triggerSubmit(): void {
+  cpRef.value?.submit()
+}
 
 const selectedRoute = computed(() => {
   if (!selectedId.value) return pipeline.results.value[0] ?? null
@@ -251,7 +256,13 @@ watch(activeTab, (t) => {
       </div>
 
       <div v-else-if="activeTab === 'settings'">
-        <ControlPanel :start="start" :loading="loading" @submit="onSubmit" @pickStart="onPickStart" />
+        <ControlPanel
+          ref="cpRef"
+          :start="start"
+          :loading="loading"
+          @submit="onSubmit"
+          @pickStart="onPickStart"
+        />
       </div>
 
       <div v-else-if="activeTab === 'alternatives' && hasResults">
@@ -276,6 +287,37 @@ watch(activeTab, (t) => {
       >
         Quota ORS partiellement consommé — les candidats restants ont été utilisés.
       </div>
+      <div
+        v-if="pipeline.distanceToleranceRelaxed.value"
+        class="mt-2 rounded-card bg-cream-100 px-4 py-3 text-xs text-terracotta-600"
+      >
+        Aucun candidat dans la tolérance de ±7,5 % — les meilleurs hors gabarit sont retournés.
+      </div>
+
+      <!-- CTA Générer rendu dans le footer du sheet (toujours visible sur l'onglet Paramètres) -->
+      <template v-if="activeTab === 'settings'" #footer>
+        <button
+          type="button"
+          class="btn-primary w-full"
+          :disabled="!start || loading"
+          @click="triggerSubmit"
+        >
+          <span v-if="loading" class="inline-flex items-center gap-2">
+            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
+              <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            </svg>
+            Génération en cours…
+          </span>
+          <span v-else class="inline-flex items-center gap-2">
+            Générer le parcours
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </span>
+        </button>
+      </template>
     </BottomSheet>
   </div>
 </template>

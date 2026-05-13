@@ -44,8 +44,21 @@ export function candidatesForResultsCount(top: number): number {
   return Math.max(ORS_CANDIDATES, top + 3)
 }
 
-/** ORS sous-livre souvent ; on demande +10% pour compenser. */
-export const ORS_OVER_REQUEST_RATIO = 1.1
+/**
+ * Ratio appliqué à la distance demandée à ORS.
+ * Observation : sur des distances courtes (~7 km), ORS sur-livre plutôt qu'il
+ * ne sous-livre. On reste donc à 1.0 (neutre) et on filtre les candidats par
+ * tolérance dans le pipeline (DISTANCE_TOLERANCE_RATIO).
+ */
+export const ORS_OVER_REQUEST_RATIO = 1.0
+
+/**
+ * Tolérance dure sur la distance avant scoring.
+ * Un candidat hors de [cible*(1-r), cible*(1+r)] est écarté.
+ * Plancher absolu de 500 m pour les très courtes distances.
+ */
+export const DISTANCE_TOLERANCE_RATIO = 0.075 // ±7.5 %
+export const DISTANCE_TOLERANCE_ABS_MIN_M = 500
 
 /** Distance min/max acceptée par l'app, en km. */
 export const DISTANCE_BOUNDS_KM = { min: 3, max: 50, step: 0.5 } as const

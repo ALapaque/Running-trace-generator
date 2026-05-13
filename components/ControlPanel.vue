@@ -105,6 +105,10 @@ function onSubmit(): void {
   })
 }
 
+// Exposé au parent (page) pour qu'il puisse trigger le submit depuis le footer
+// du BottomSheet, sans avoir besoin de remonter l'état du formulaire.
+defineExpose({ submit: onSubmit, canSubmit: () => !!props.start })
+
 const terrainOptions: RouteGenerationInput['terrain'][] = [
   'route',
   'chemin_large',
@@ -326,32 +330,11 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </p>
     </section>
 
-    <!-- CTA sticky bas (relatif au scroll container de la sheet) -->
-    <div
-      class="sticky bottom-0 -mx-4 mt-2 border-t border-cream-200 bg-cream-50/95 px-4 py-3 backdrop-blur"
-      style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
-    >
-      <button
-        type="submit"
-        class="btn-primary w-full"
-        :disabled="!start || loading"
-      >
-        <span v-if="loading" class="inline-flex items-center gap-2">
-          <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
-            <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-          </svg>
-          Génération en cours…
-        </span>
-        <span v-else class="inline-flex items-center gap-2">
-          Générer le parcours
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
-        </span>
-      </button>
-    </div>
+    <!-- CTA Générer : rendu par la page dans le footer du BottomSheet
+         (via défineExpose `submit` + slot `#footer`). -->
+    <button type="submit" class="hidden" aria-hidden="true" tabindex="-1">
+      Submit (caché, déclenché par Enter dans un input)
+    </button>
   </form>
 </template>
 

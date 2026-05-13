@@ -7,7 +7,12 @@ import { ref } from 'vue'
 import { OrsQuotaExceededError, useRouteGenerator } from './useRouteGenerator'
 import { useTerrainAnalyzer } from './useTerrainAnalyzer'
 import { useScoring } from './useScoring'
-import { DEFAULT_RESULTS_COUNT, candidatesForResultsCount } from '../config'
+import {
+  DEFAULT_RESULTS_COUNT,
+  DISTANCE_TOLERANCE_ABS_MIN_M,
+  DISTANCE_TOLERANCE_RATIO,
+  candidatesForResultsCount,
+} from '../config'
 import type { AnalyzedRoute } from '../types'
 import type { RouteGenerationInput } from '../types/ors'
 
@@ -25,6 +30,8 @@ export function useRoutePipeline() {
   const errorMessage = ref<string | null>(null)
   const quotaWarning = ref(false)
   const overpassFallback = ref(false)
+  /** True quand le filtre de tolérance distance a dû être relâché. */
+  const distanceToleranceRelaxed = ref(false)
   const results = ref<AnalyzedRoute[]>([])
 
   const { generateCandidates } = useRouteGenerator()
@@ -66,7 +73,23 @@ export function useRoutePipeline() {
       }
 
       stage.value = 'scoring'
-      const top = rank(analyses, input, resultsCount)
+
+      // Filtrage strict par tolérance distance avant scoring : ORS peut
+      // sur-livrer fortement sur les courtes distances (ex. demande 7 km,
+      // renvoie 10 km). On écarte tout candidat hors gabarit, sauf si on
+      // se retrouve avec trop peu de candidats.
+      const targetM = input.distanceKm * 1000
+      const toleranceM = Math.max(
+        DISTANCE_TOLERANCE_ABS_MIN_M,
+        targetM * DISTANCE_TOLERANCE_RATIO,
+      )
+      const within = analyses.filter(
+        (a) => Math.abs(a.candidate.distanceM - targetM) <= toleranceM,
+      )
+      const usable = within.length >= Math.min(resultsCount, 3) ? within : analyses
+      distanceToleranceRelaxed.value = usable !== within
+
+      const top = rank(usable, input, resultsCount)
       results.value = top
       progress.value = 1
       stage.value = 'done'
@@ -90,7 +113,18 @@ export function useRoutePipeline() {
     progress.value = 0
     errorMessage.value = null
     results.value = []
+    distanceToleranceRelaxed.value = false
   }
 
-  return { stage, progress, errorMessage, quotaWarning, overpassFallback, results, run, reset }
+  return {
+    stage,
+    progress,
+    errorMessage,
+    quotaWarning,
+    overpassFallback,
+    distanceToleranceRelaxed,
+    results,
+    run,
+    reset,
+  }
 }
