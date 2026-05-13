@@ -14,7 +14,7 @@
  */
 import { computed, ref, watch } from 'vue'
 import BottomSheet, { type SheetSnap } from '../components/BottomSheet.vue'
-import ControlPanel from '../components/ControlPanel.vue'
+import ControlPanel, { type ControlPanelSubmit } from '../components/ControlPanel.vue'
 import ElevationChart from '../components/ElevationChart.vue'
 import FloatingButton from '../components/FloatingButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
@@ -25,7 +25,7 @@ import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
 import TerrainBreakdown from '../components/TerrainBreakdown.vue'
 import { useGpxExport } from '../composables/useGpxExport'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
-import type { LatLng, RouteGenerationInput } from '../types/ors'
+import type { LatLng } from '../types/ors'
 
 type TabKey = 'details' | 'settings' | 'alternatives'
 
@@ -68,11 +68,12 @@ function onPickStart(pos: LatLng): void {
   start.value = pos
 }
 
-async function onSubmit(payload: RouteGenerationInput): Promise<void> {
+async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
   abort?.abort()
   abort = new AbortController()
+  const { resultsCount, ...input } = payload
   try {
-    const top = await pipeline.run(payload, abort.signal)
+    const top = await pipeline.run(input, { signal: abort.signal, resultsCount })
     selectedId.value = top[0]?.id ?? null
     activeTab.value = 'details'
     snap.value = 'mid'

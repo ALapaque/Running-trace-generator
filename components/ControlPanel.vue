@@ -9,13 +9,21 @@
  */
 import { reactive, ref, watch } from 'vue'
 import {
+  DEFAULT_RESULTS_COUNT,
   DISTANCE_BOUNDS_KM,
   ELEVATION_BOUNDS_M,
   HILL_LABELS,
+  RESULTS_COUNT_OPTIONS,
   TERRAIN_LABELS,
+  type ResultsCount,
 } from '../config'
 import { useGeocoding, type GeocodeResult } from '../composables/useGeocoding'
+import { useGeolocation } from '../composables/useGeolocation'
 import type { LatLng, RouteGenerationInput } from '../types/ors'
+
+export interface ControlPanelSubmit extends RouteGenerationInput {
+  resultsCount: ResultsCount
+}
 
 const props = defineProps<{
   start: LatLng | null
@@ -23,7 +31,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'submit', payload: RouteGenerationInput): void
+  (e: 'submit', payload: ControlPanelSubmit): void
   (e: 'pickStart', position: LatLng): void
 }>()
 
@@ -33,7 +41,21 @@ const form = reactive({
   terrain: 'mixte' as RouteGenerationInput['terrain'],
   preferForest: false,
   hills: 'vallonné' as RouteGenerationInput['hills'],
+  resultsCount: DEFAULT_RESULTS_COUNT as ResultsCount,
 })
+
+const geo = useGeolocation()
+
+async function useCurrentPosition(): Promise<void> {
+  try {
+    const pos = await geo.request()
+    emit('pickStart', pos)
+    geocodeQuery.value = 'Ma position'
+    geocodeResults.value = []
+  } catch {
+    // L'erreur est exposée via geo.error et affichée dans le template.
+  }
+}
 
 const geocodeQuery = ref('')
 const geocodeResults = ref<GeocodeResult[]>([])
@@ -79,6 +101,7 @@ function onSubmit(): void {
     terrain: form.terrain,
     preferForest: form.preferForest,
     hills: form.hills,
+    resultsCount: form.resultsCount,
   })
 }
 
@@ -93,33 +116,72 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 
 <template>
   <form class="flex flex-col gap-6 pb-32" @submit.prevent="onSubmit">
-    <!-- Recherche adresse -->
+    <!-- Recherche adresse + ma position -->
     <section>
       <label for="address-search" class="text-label uppercase text-ink-500">
         Point de départ
       </label>
-      <div class="relative mt-1">
-        <svg
-          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
+      <div class="mt-1 flex gap-2">
+        <div class="relative flex-1">
+          <svg
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            id="address-search"
+            v-model="geocodeQuery"
+            type="text"
+            placeholder="Recherche une adresse"
+            class="w-full rounded-pill border border-cream-200 bg-white py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-400"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          type="button"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-white px-3 text-ink-900 transition hover:bg-cream-100 active:scale-95 disabled:opacity-60"
+          style="min-width: 44px; min-height: 44px;"
+          :aria-label="geo.loading.value ? 'Localisation en cours' : 'Utiliser ma position actuelle'"
+          :aria-busy="geo.loading.value || undefined"
+          :disabled="geo.loading.value"
+          @click="useCurrentPosition"
         >
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          id="address-search"
-          v-model="geocodeQuery"
-          type="text"
-          placeholder="Recherche une adresse"
-          class="w-full rounded-pill border border-cream-200 bg-white py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-400"
-          autocomplete="off"
-        />
+          <svg
+            v-if="!geo.loading.value"
+            viewBox="0 0 24 24"
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <line x1="12" y1="2" x2="12" y2="5" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="22" y2="12" />
+          </svg>
+          <svg
+            v-else
+            class="h-5 w-5 animate-spin text-olive-900"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
+            <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </button>
       </div>
       <ul
         v-if="geocodeResults.length"
@@ -136,13 +198,16 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           {{ r.label }}
         </li>
       </ul>
-      <p v-if="geocoding" class="mt-1 text-xs text-ink-400">Recherche en cours…</p>
+      <p v-if="geo.error.value" class="mt-2 text-xs text-terracotta-600" role="alert">
+        {{ geo.error.value }}
+      </p>
+      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">Recherche en cours…</p>
       <p v-else-if="start" class="mt-2 text-xs text-ink-500">
         {{ start.lat.toFixed(5) }}, {{ start.lng.toFixed(5) }}
         — ou clique sur la carte pour repositionner.
       </p>
       <p v-else class="mt-2 text-xs text-terracotta-600">
-        Clique sur la carte pour définir le point de départ.
+        Clique sur la carte, recherche une adresse, ou utilise « ma position ».
       </p>
     </section>
 
@@ -238,6 +303,27 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           {{ HILL_LABELS[opt] }}
         </button>
       </div>
+    </section>
+
+    <!-- Nombre d'alternatives -->
+    <section>
+      <span class="text-label uppercase text-ink-500">Alternatives à proposer</span>
+      <div class="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Nombre d'alternatives">
+        <button
+          v-for="n in RESULTS_COUNT_OPTIONS"
+          :key="n"
+          type="button"
+          role="radio"
+          :aria-checked="form.resultsCount === n"
+          :class="form.resultsCount === n ? 'pill-active' : 'pill-muted'"
+          @click="form.resultsCount = n"
+        >
+          {{ n }}
+        </button>
+      </div>
+      <p v-if="form.resultsCount >= 10" class="mt-2 text-xs text-ink-500">
+        Plus d'alternatives = plus de requêtes ORS consommées (~13 par génération).
+      </p>
     </section>
 
     <!-- CTA sticky bas -->

@@ -7,10 +7,17 @@ import { ref } from 'vue'
 import { OrsQuotaExceededError, useRouteGenerator } from './useRouteGenerator'
 import { useTerrainAnalyzer } from './useTerrainAnalyzer'
 import { useScoring } from './useScoring'
+import { DEFAULT_RESULTS_COUNT, candidatesForResultsCount } from '../config'
 import type { AnalyzedRoute } from '../types'
 import type { RouteGenerationInput } from '../types/ors'
 
 export type PipelineStage = 'idle' | 'generating' | 'analyzing' | 'scoring' | 'done' | 'error'
+
+export interface PipelineRunOptions {
+  signal?: AbortSignal
+  /** Nombre d'alternatives à retourner après scoring (3, 5 ou 10). */
+  resultsCount?: number
+}
 
 export function useRoutePipeline() {
   const stage = ref<PipelineStage>('idle')
@@ -24,7 +31,14 @@ export function useRoutePipeline() {
   const { analyzeCandidate } = useTerrainAnalyzer()
   const { rank } = useScoring()
 
-  async function run(input: RouteGenerationInput, signal?: AbortSignal): Promise<AnalyzedRoute[]> {
+  async function run(
+    input: RouteGenerationInput,
+    options: PipelineRunOptions = {},
+  ): Promise<AnalyzedRoute[]> {
+    const signal = options.signal
+    const resultsCount = options.resultsCount ?? DEFAULT_RESULTS_COUNT
+    const candidateCount = candidatesForResultsCount(resultsCount)
+
     stage.value = 'generating'
     progress.value = 0.05
     errorMessage.value = null
@@ -33,7 +47,10 @@ export function useRoutePipeline() {
     results.value = []
 
     try {
-      const { candidates, quotaExceeded } = await generateCandidates(input, { signal })
+      const { candidates, quotaExceeded } = await generateCandidates(input, {
+        signal,
+        count: candidateCount,
+      })
       quotaWarning.value = quotaExceeded
       progress.value = 0.35
 
@@ -49,7 +66,7 @@ export function useRoutePipeline() {
       }
 
       stage.value = 'scoring'
-      const top = rank(analyses, input, 3)
+      const top = rank(analyses, input, resultsCount)
       results.value = top
       progress.value = 1
       stage.value = 'done'

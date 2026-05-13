@@ -27,8 +27,22 @@ export const SCORING_WEIGHTS: ScoringWeights = {
   w_profile: 0.1,
 }
 
-/** Génération ORS — nombre de candidats à générer en parallèle. */
+/** Génération ORS — nombre de candidats à générer en parallèle (valeur min). */
 export const ORS_CANDIDATES = 8
+
+/** Options proposées à l'utilisateur pour le nombre d'alternatives retournées. */
+export const RESULTS_COUNT_OPTIONS = [3, 5, 10] as const
+export type ResultsCount = (typeof RESULTS_COUNT_OPTIONS)[number]
+export const DEFAULT_RESULTS_COUNT: ResultsCount = 5
+
+/**
+ * Combien de candidats ORS générer pour pouvoir extraire `top` alternatives.
+ * On garde une marge de sélection (~+3) pour que le scoring puisse écarter
+ * les pires candidats même quand l'utilisateur demande 10 résultats.
+ */
+export function candidatesForResultsCount(top: number): number {
+  return Math.max(ORS_CANDIDATES, top + 3)
+}
 
 /** ORS sous-livre souvent ; on demande +10% pour compenser. */
 export const ORS_OVER_REQUEST_RATIO = 1.1
