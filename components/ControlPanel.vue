@@ -115,7 +115,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 </script>
 
 <template>
-  <form class="flex flex-col gap-6 pb-32" @submit.prevent="onSubmit">
+  <form class="flex flex-col gap-6" @submit.prevent="onSubmit">
     <!-- Recherche adresse + ma position -->
     <section>
       <label for="address-search" class="text-label uppercase text-ink-500">
@@ -326,9 +326,9 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </p>
     </section>
 
-    <!-- CTA sticky bas -->
+    <!-- CTA sticky bas (relatif au scroll container de la sheet) -->
     <div
-      class="fixed inset-x-0 bottom-0 z-10 border-t border-cream-200 bg-cream-50/95 px-4 py-3 backdrop-blur"
+      class="sticky bottom-0 -mx-4 mt-2 border-t border-cream-200 bg-cream-50/95 px-4 py-3 backdrop-blur"
       style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
     >
       <button

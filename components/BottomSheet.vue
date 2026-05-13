@@ -149,6 +149,16 @@ const transition = computed(() =>
     : 'none',
 )
 
+/**
+ * Hauteur visible de la sheet sous le drag handle.
+ * Indispensable car la sheet est `h-dvh` translatée vers le bas : sans cap,
+ * le scroll container déborde sous le viewport et le contenu en fin (ex. CTA
+ * sticky) devient inaccessible.
+ */
+const scrollAreaHeight = computed(
+  () => `calc(100dvh - ${Math.round(translateY.value)}px - 2rem)`,
+)
+
 function onResize(): void {
   computeSnaps()
   applySnap(props.snap)
@@ -209,9 +219,10 @@ function onScrimClick(): void {
       <span class="drag-handle block" />
     </div>
 
-    <!-- Contenu scrollable de la sheet -->
+    <!-- Contenu scrollable de la sheet (hauteur = portion visible sous le drag handle) -->
     <div
-      class="h-[calc(100%-2rem)] overflow-y-auto overscroll-contain px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"
+      class="overflow-y-auto overscroll-contain px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"
+      :style="{ height: scrollAreaHeight }"
     >
       <slot />
     </div>
