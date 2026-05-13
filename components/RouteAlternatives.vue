@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * Vue d'ensemble des 3 candidats avec leur score, pour permettre à l'utilisateur
- * de basculer entre eux.
- */
 import type { AnalyzedRoute } from '../types'
 
 const props = defineProps<{
@@ -18,38 +14,49 @@ function fmtKm(m: number): string {
 </script>
 
 <template>
-  <div class="rounded-md border border-slate-200 bg-white p-3">
-    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-      Alternatives ({{ props.routes.length }})
-    </h3>
-    <ul class="space-y-2">
+  <section>
+    <h3 class="mb-3 text-base font-bold text-ink-900">Alternatives</h3>
+    <ul class="space-y-2" role="listbox" aria-label="Alternatives de parcours">
       <li v-for="(r, idx) in props.routes" :key="r.id">
         <button
           type="button"
-          class="w-full rounded-md border px-3 py-2 text-left transition"
-          :class="
+          role="option"
+          :aria-selected="selectedId === r.id"
+          :class="[
+            'flex w-full items-center gap-3 rounded-card border p-3 text-left transition',
             selectedId === r.id
-              ? 'border-blue-600 bg-blue-50'
-              : 'border-slate-200 hover:border-slate-400'
-          "
+              ? 'border-olive-900 bg-cream-100 shadow-card'
+              : 'border-cream-200 bg-white hover:border-cream-400',
+          ]"
           @click="emit('select', r.id)"
         >
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold">
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] mr-2">
-                {{ idx + 1 }}
-              </span>
-              {{ fmtKm(r.distanceM) }} km
-            </span>
-            <span class="font-mono text-xs text-slate-500">score {{ r.score.toFixed(3) }}</span>
+          <span
+            :class="[
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-sm font-bold',
+              selectedId === r.id ? 'bg-olive-900 text-white' : 'bg-cream-200 text-ink-700',
+            ]"
+            aria-hidden="true"
+          >
+            {{ idx + 1 }}
+          </span>
+          <div class="flex-1">
+            <p class="flex items-baseline gap-1">
+              <span class="text-lg font-bold tabular-nums">{{ fmtKm(r.distanceM) }}</span>
+              <span class="text-xs text-ink-500">km</span>
+              <span class="mx-2 text-ink-300">•</span>
+              <span class="text-lg font-bold tabular-nums">{{ Math.round(r.elevationGainM) }}</span>
+              <span class="text-xs text-ink-500">m D+</span>
+            </p>
+            <p class="mt-0.5 text-xs text-ink-500">
+              Route {{ Math.round(r.terrain.route * 100) }}%
+              · Chemin {{ Math.round(r.terrain.chemin_large * 100) }}%
+              · Single {{ Math.round(r.terrain.single * 100) }}%
+              <span v-if="r.terrain.forest > 0">· Forêt {{ Math.round(r.terrain.forest * 100) }}%</span>
+            </p>
           </div>
-          <div class="mt-1 grid grid-cols-3 gap-2 text-[11px] text-slate-500">
-            <span>D+ {{ Math.round(r.elevationGainM) }}m</span>
-            <span>Route {{ Math.round(r.terrain.route * 100) }}%</span>
-            <span>Forêt {{ Math.round(r.terrain.forest * 100) }}%</span>
-          </div>
+          <span class="font-mono text-[11px] text-ink-400">score {{ r.score.toFixed(2) }}</span>
         </button>
       </li>
     </ul>
-  </div>
+  </section>
 </template>

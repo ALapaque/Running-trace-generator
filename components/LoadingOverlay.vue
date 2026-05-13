@@ -15,48 +15,44 @@ const label = computed(() => {
       return 'Analyse du terrain…'
     case 'scoring':
       return 'Sélection des meilleurs candidats…'
-    case 'done':
-      return 'Terminé'
-    case 'error':
-      return 'Erreur'
     default:
       return ''
   }
 })
 
 const visible = computed(
-  () => props.stage === 'generating' || props.stage === 'analyzing' || props.stage === 'scoring',
+  () =>
+    props.stage === 'generating' ||
+    props.stage === 'analyzing' ||
+    props.stage === 'scoring',
 )
 </script>
 
 <template>
-  <transition name="fade">
+  <transition
+    enter-active-class="transition-opacity duration-200 ease-out-soft"
+    leave-active-class="transition-opacity duration-200 ease-in-soft"
+    enter-from-class="opacity-0"
+    leave-to-class="opacity-0"
+  >
     <div
       v-if="visible"
-      class="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center bg-white/60 backdrop-blur-[2px]"
+      class="pointer-events-none fixed inset-x-0 top-6 z-50 mx-auto flex w-fit max-w-[90vw] items-center justify-center"
       role="status"
       aria-live="polite"
     >
-      <div class="pointer-events-auto w-[280px] rounded-md border border-slate-200 bg-white p-4 shadow-lg">
-        <p class="text-sm font-semibold text-slate-900">{{ label }}</p>
-        <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-          <div
-            class="h-full bg-blue-600 transition-all duration-300"
-            :style="{ width: `${Math.min(100, progress * 100)}%` }"
-          />
-        </div>
+      <div
+        class="pointer-events-auto flex items-center gap-3 rounded-pill bg-white px-4 py-2.5 shadow-float"
+      >
+        <svg class="h-4 w-4 shrink-0 animate-spin text-olive-900" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.2" stroke-width="3" />
+          <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+        </svg>
+        <span class="text-sm font-semibold text-ink-900">{{ label }}</span>
+        <span class="font-mono text-xs text-ink-500 tabular-nums">
+          {{ Math.round(progress * 100) }}%
+        </span>
       </div>
     </div>
   </transition>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

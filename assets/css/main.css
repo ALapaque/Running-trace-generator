@@ -2,38 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://rsms.me/inter/inter.css');
+
 html,
 body,
 #__nuxt {
   height: 100%;
+  height: 100dvh;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
-  font-feature-settings: 'cv11', 'ss01';
+  @apply bg-cream-50 text-ink-900 antialiased;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+  overscroll-behavior-y: contain;
 }
 
 .leaflet-container {
-  background: #f1f5f9;
+  background: #E8E4D8;
+  font-family: inherit;
 }
 
-/* Accessibilité : focus visible */
+/* Custom Leaflet controls discrets pour matcher le style Komoot */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 12px -2px rgba(26, 26, 26, 0.18) !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+.leaflet-control-zoom a {
+  background: white !important;
+  color: #3D4A2A !important;
+  font-weight: 600 !important;
+  border-bottom-color: #EDE9DF !important;
+}
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.85) !important;
+  font-size: 10px !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+}
+
+/* Accessibilité : focus visible cohérent */
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #3D4A2A;
   outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition;
-  }
+  /* Bouton principal Komoot : pill vert olive */
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-olive-900 px-6 py-3
+           text-sm font-semibold text-white shadow-float transition
+           hover:bg-olive-800 active:scale-[0.98]
+           disabled:bg-ink-300 disabled:cursor-not-allowed disabled:shadow-none;
+    min-height: 44px;
   }
-  .btn-secondary {
-    @apply btn bg-slate-200 text-slate-800 hover:bg-slate-300;
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-cream-100 px-4 py-2
+           text-sm font-medium text-ink-900 transition hover:bg-cream-200
+           active:scale-[0.98];
+    min-height: 44px;
   }
-  .field-label {
-    @apply block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1;
+
+  /* Bouton circulaire flottant (carte) */
+  .fab {
+    @apply flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink-900
+           shadow-float transition hover:bg-cream-50 active:scale-95;
+  }
+  .fab-sm {
+    @apply flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink-900
+           shadow-float transition hover:bg-cream-50 active:scale-95;
+  }
+
+  /* Pill (toggles, tags, difficulty) */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold;
+  }
+  .pill-active {
+    @apply pill bg-olive-900 text-white;
+  }
+  .pill-muted {
+    @apply pill bg-cream-100 text-ink-900;
+  }
+
+  /* Carte arrondie discrète */
+  .card {
+    @apply rounded-card bg-white p-4 shadow-card;
+  }
+  .card-flush {
+    @apply rounded-card bg-cream-100 p-4;
+  }
+
+  /* Drag handle de bottom sheet */
+  .drag-handle {
+    @apply mx-auto h-1 w-10 rounded-pill bg-ink-300;
   }
 }

@@ -1,26 +1,31 @@
 <script setup lang="ts">
 /**
- * Carte Leaflet :
- *  - Affiche un marker pour le point de départ (clic pour le déplacer).
- *  - Affiche la polyline du parcours sélectionné, colorée par type de chemin (segments).
- *  - Tiles OpenStreetMap (attribution requise).
+ * Carte Leaflet plein écran style Komoot :
+ *  - Tiles OSM avec attribution discrète.
+ *  - Marker rond personnalisé (vert olive) pour le départ, draggable.
+ *  - Polyline composée de segments colorés par type de chemin détecté.
+ *  - Marqueurs numérotés tous les ~10% (1–10) sur la polyline pour mimer Komoot.
+ *  - Boutons zoom retirés (gérés par FAB externe ou contrôle natif Leaflet).
  */
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import type { LatLng } from '../types/ors'
 import type { AnalyzedRoute } from '../types'
 import { PATH_COLORS } from '../config'
-import type { PathType } from '../types/osm'
 
 const props = defineProps<{
   start: LatLng | null
   route: AnalyzedRoute | null
+  /** Numéro de waypoints à afficher (Komoot-style). Si false → polyline seule. */
+  showWaypoints?: boolean
 }>()
 
-const emit = defineEmits<{ (e: 'pickStart', position: LatLng): void }>()
+const emit = defineEmits<{
+  (e: 'pickStart', position: LatLng): void
+  (e: 'ready'): void
+}>()
 
 const mapEl = ref<HTMLDivElement | null>(null)
 
-// Refs Leaflet (typés via import dynamique).
 let map: import('leaflet').Map | null = null
 let marker: import('leaflet').Marker | null = null
 let routeLayer: import('leaflet').LayerGroup | null = null
@@ -33,18 +38,47 @@ async function loadLeaflet(): Promise<typeof import('leaflet')> {
   return LRef
 }
 
+function makeStartIcon(L: typeof import('leaflet')) {
+  return L.divIcon({
+    className: '',
+    html: `
+      <span class="block h-6 w-6 rounded-full bg-olive-900 ring-4 ring-white shadow-float"
+            style="background:#3D4A2A;border:4px solid white;border-radius:9999px;width:24px;height:24px;display:block;box-shadow:0 4px 12px -2px rgba(26,26,26,0.18);"></span>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  })
+}
+
+function makeWaypointIcon(L: typeof import('leaflet'), n: number) {
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#1A1A1A;color:white;font-size:12px;font-weight:700;border:2px solid white;box-shadow:0 2px 6px -1px rgba(0,0,0,0.3);">${n}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  })
+}
+
 onMounted(async () => {
   if (!mapEl.value) return
   const L = await loadLeaflet()
-  const initial = props.start ?? { lat: 50.8503, lng: 4.3517 } // Bruxelles par défaut
+  const initial = props.start ?? { lat: 50.4108, lng: 4.4446 } // Charleroi par défaut
 
-  map = L.map(mapEl.value, { zoomControl: true }).setView([initial.lat, initial.lng], 13)
+  map = L.map(mapEl.value, {
+    zoomControl: false,
+    attributionControl: true,
+  }).setView([initial.lat, initial.lng], 13)
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '&copy; OpenStreetMap',
     maxZoom: 19,
   }).addTo(map)
 
-  marker = L.marker([initial.lat, initial.lng], { draggable: true }).addTo(map)
+  marker = L.marker([initial.lat, initial.lng], {
+    draggable: true,
+    icon: makeStartIcon(L),
+  }).addTo(map)
+
   marker.on('dragend', () => {
     if (!marker) return
     const pos = marker.getLatLng()
@@ -58,6 +92,7 @@ onMounted(async () => {
   })
 
   routeLayer = L.layerGroup().addTo(map)
+  emit('ready')
 })
 
 onBeforeUnmount(() => {
@@ -69,10 +104,12 @@ onBeforeUnmount(() => {
 
 watch(
   () => props.start,
-  (s) => {
-    if (!s || !marker || !map || !LRef) return
+  async (s) => {
+    if (!s || !marker || !map) return
+    const L = await loadLeaflet()
     marker.setLatLng([s.lat, s.lng])
-    map.panTo([s.lat, s.lng])
+    if (!props.route) map.panTo([s.lat, s.lng])
+    void L
   },
 )
 
@@ -89,27 +126,15 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
   routeLayer.clearLayers()
   if (!route) return
 
-  // On dessine la polyline en segments colorés selon le type détecté.
-  // Les segments sont indexés par décimation à ~50m ; on reproduit la coloration
-  // sur la polyline complète en associant chaque point au segment décimé le plus proche.
-  const colorByIndex = new Map<number, string>()
-  const segByPointIdx = new Map<number, PathType | 'unknown'>()
-
-  // segments[i].index est l'indice dans le tableau décimé, pas dans points.
-  // Pour rester simple : on reconstruit en partant des segments dans l'ordre.
   if (route.segments.length === 0) {
-    L.polyline(route.points.map((p) => [p.lat, p.lng]), {
-      color: PATH_COLORS.unknown,
-      weight: 4,
-      opacity: 0.85,
-    }).addTo(routeLayer)
+    L.polyline(
+      route.points.map((p) => [p.lat, p.lng]),
+      { color: PATH_COLORS.unknown, weight: 5, opacity: 0.9 },
+    ).addTo(routeLayer)
   } else {
-    // Découpe l'ensemble des points en sous-tronçons à chaque changement de type.
-    // On répartit `points` uniformément sur les `segments` (le ratio est cohérent
-    // car les segments viennent d'une décimation linéaire).
     const ratio = route.points.length / route.segments.length
     let bucketStart = 0
-    let currentType: PathType | 'unknown' = route.segments[0]!.pathType
+    let currentType = route.segments[0]!.pathType
     for (let i = 1; i <= route.segments.length; i++) {
       const type = i < route.segments.length ? route.segments[i]!.pathType : currentType
       if (type !== currentType || i === route.segments.length) {
@@ -120,8 +145,8 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
             slice.map((p) => [p.lat, p.lng]),
             {
               color: PATH_COLORS[currentType as keyof typeof PATH_COLORS] ?? PATH_COLORS.unknown,
-              weight: 4,
-              opacity: 0.9,
+              weight: 5,
+              opacity: 0.95,
             },
           ).addTo(routeLayer)
         }
@@ -131,14 +156,42 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
     }
   }
 
-  // Recadre la vue.
-  const bounds = L.latLngBounds(route.points.map((p) => [p.lat, p.lng]))
-  map.fitBounds(bounds, { padding: [40, 40] })
+  // Marqueurs numérotés (style Komoot) sur 10 paliers réguliers
+  if (props.showWaypoints !== false && route.points.length > 10) {
+    const total = route.points.length
+    for (let i = 1; i <= 10; i++) {
+      const idx = Math.min(total - 1, Math.floor((total / 10) * i))
+      const p = route.points[idx]!
+      L.marker([p.lat, p.lng], { icon: makeWaypointIcon(L, i), interactive: false }).addTo(
+        routeLayer,
+      )
+    }
+  }
 
-  // Suppression des warnings non utilisés (segByPointIdx, colorByIndex reservés pour évolution future).
-  void colorByIndex
-  void segByPointIdx
+  const bounds = L.latLngBounds(route.points.map((p) => [p.lat, p.lng]))
+  map.fitBounds(bounds, { padding: [60, 60] })
 }
+
+/** API exposée au parent (pour le bouton "recentrer"). */
+function recenter(): void {
+  if (!map) return
+  if (props.route) {
+    if (!LRef) return
+    const b = LRef.latLngBounds(props.route.points.map((p) => [p.lat, p.lng]))
+    map.fitBounds(b, { padding: [60, 60] })
+  } else if (props.start) {
+    map.panTo([props.start.lat, props.start.lng])
+  }
+}
+
+function zoomIn(): void {
+  map?.zoomIn()
+}
+function zoomOut(): void {
+  map?.zoomOut()
+}
+
+defineExpose({ recenter, zoomIn, zoomOut })
 </script>
 
 <template>
