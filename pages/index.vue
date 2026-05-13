@@ -105,8 +105,10 @@ watch(activeTab, (t) => {
 
 <template>
   <div class="relative h-dvh w-screen overflow-hidden bg-cream-50">
-    <!-- Carte plein écran -->
-    <div class="absolute inset-0">
+    <!-- Carte plein écran — `z-0` + `isolate` isolent le stacking context
+         Leaflet (panes 200/400/600/800) pour empêcher ses z-index internes
+         de passer au-dessus du sheet et des FABs. -->
+    <div class="absolute inset-0 z-0 isolate">
       <MapView
         ref="mapRef"
         :start="start"
