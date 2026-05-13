@@ -25,15 +25,15 @@ function fmtKm(m: number): string {
           :class="[
             'flex w-full items-center gap-3 rounded-card border p-3 text-left transition',
             selectedId === r.id
-              ? 'border-olive-900 bg-cream-100 shadow-card'
-              : 'border-cream-200 bg-white hover:border-cream-400',
+              ? 'border-neon-cyan bg-cream-100 shadow-glow-cyan'
+              : 'border-cream-200 bg-cream-100 hover:border-cream-300',
           ]"
           @click="emit('select', r.id)"
         >
           <span
             :class="[
               'flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-sm font-bold',
-              selectedId === r.id ? 'bg-olive-900 text-white' : 'bg-cream-200 text-ink-700',
+              selectedId === r.id ? 'bg-neon-cyan text-cream-50' : 'bg-cream-200 text-ink-700',
             ]"
             aria-hidden="true"
           >

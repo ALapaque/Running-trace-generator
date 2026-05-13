@@ -41,19 +41,16 @@ async function loadLeaflet(): Promise<typeof import('leaflet')> {
 function makeStartIcon(L: typeof import('leaflet')) {
   return L.divIcon({
     className: '',
-    html: `
-      <span class="block h-6 w-6 rounded-full bg-olive-900 ring-4 ring-white shadow-float"
-            style="background:#3D4A2A;border:4px solid white;border-radius:9999px;width:24px;height:24px;display:block;box-shadow:0 4px 12px -2px rgba(26,26,26,0.18);"></span>
-    `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `<span style="display:block;width:22px;height:22px;border-radius:9999px;background:#00E5FF;border:3px solid #0B0E14;box-shadow:0 0 0 2px #00E5FF, 0 0 16px 4px rgba(0,229,255,0.55);"></span>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   })
 }
 
 function makeWaypointIcon(L: typeof import('leaflet'), n: number) {
   return L.divIcon({
     className: '',
-    html: `<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#1A1A1A;color:white;font-size:12px;font-weight:700;border:2px solid white;box-shadow:0 2px 6px -1px rgba(0,0,0,0.3);">${n}</span>`,
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#0B0E14;color:#00E5FF;font-size:12px;font-weight:700;border:1.5px solid #00E5FF;box-shadow:0 0 10px rgba(0,229,255,0.6);">${n}</span>`,
     iconSize: [26, 26],
     iconAnchor: [13, 13],
   })
@@ -69,9 +66,11 @@ onMounted(async () => {
     attributionControl: true,
   }).setView([initial.lat, initial.lng], 13)
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap',
-    maxZoom: 19,
+  // CartoDB Dark Matter (gratuit, OSM data + style sombre)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20,
   }).addTo(map)
 
   marker = L.marker([initial.lat, initial.lng], {
@@ -129,7 +128,7 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
   if (route.segments.length === 0) {
     L.polyline(
       route.points.map((p) => [p.lat, p.lng]),
-      { color: PATH_COLORS.unknown, weight: 5, opacity: 0.9 },
+      { color: PATH_COLORS.unknown, weight: 5, opacity: 0.95, className: 'route-glow' },
     ).addTo(routeLayer)
   } else {
     const ratio = route.points.length / route.segments.length
@@ -146,7 +145,8 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
             {
               color: PATH_COLORS[currentType as keyof typeof PATH_COLORS] ?? PATH_COLORS.unknown,
               weight: 5,
-              opacity: 0.95,
+              opacity: 1,
+              className: 'route-glow',
             },
           ).addTo(routeLayer)
         }

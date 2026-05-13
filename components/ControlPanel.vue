@@ -141,13 +141,13 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             v-model="geocodeQuery"
             type="text"
             placeholder="Recherche une adresse"
-            class="w-full rounded-pill border border-cream-200 bg-white py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-400"
+            class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-neon-cyan focus:outline-none"
             autocomplete="off"
           />
         </div>
         <button
           type="button"
-          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-white px-3 text-ink-900 transition hover:bg-cream-100 active:scale-95 disabled:opacity-60"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-neon-cyan transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
           style="min-width: 44px; min-height: 44px;"
           :aria-label="geo.loading.value ? 'Localisation en cours' : 'Utiliser ma position actuelle'"
           :aria-busy="geo.loading.value || undefined"
@@ -185,13 +185,13 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </div>
       <ul
         v-if="geocodeResults.length"
-        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-200 bg-white text-sm shadow-card"
+        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-200 bg-cream-100 text-sm shadow-card"
         role="listbox"
       >
         <li
           v-for="r in geocodeResults"
           :key="r.label"
-          class="cursor-pointer px-4 py-3 hover:bg-cream-100"
+          class="cursor-pointer px-4 py-3 text-ink-900 hover:bg-cream-200"
           role="option"
           @click="selectGeocode(r)"
         >
@@ -279,9 +279,9 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             type="checkbox"
             class="peer sr-only"
           />
-          <span class="absolute inset-0 rounded-pill bg-ink-200 transition peer-checked:bg-olive-900" />
+          <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-neon-cyan" />
           <span
-            class="absolute left-0.5 top-0.5 h-5 w-5 rounded-pill bg-white shadow-card transition-transform peer-checked:translate-x-5"
+            class="absolute left-0.5 top-0.5 h-5 w-5 rounded-pill bg-ink-900 shadow-card transition-transform peer-checked:translate-x-5"
           />
         </span>
       </label>
@@ -369,8 +369,8 @@ input[type='range']::-webkit-slider-thumb {
   height: 22px;
   border-radius: 999px;
   background: theme('colors.olive.900');
-  border: 3px solid white;
-  box-shadow: 0 2px 6px -1px rgba(26, 26, 26, 0.25);
+  border: 3px solid theme('colors.cream.50');
+  box-shadow: 0 0 12px 0 rgba(0, 229, 255, 0.5);
   cursor: pointer;
 }
 input[type='range']::-moz-range-thumb {
@@ -378,8 +378,8 @@ input[type='range']::-moz-range-thumb {
   height: 22px;
   border-radius: 999px;
   background: theme('colors.olive.900');
-  border: 3px solid white;
-  box-shadow: 0 2px 6px -1px rgba(26, 26, 26, 0.25);
+  border: 3px solid theme('colors.cream.50');
+  box-shadow: 0 0 12px 0 rgba(0, 229, 255, 0.5);
   cursor: pointer;
 }
 </style>

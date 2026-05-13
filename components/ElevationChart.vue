@@ -77,8 +77,23 @@ const path = computed<Computed>(() => {
       role="img"
       aria-label="Profil altimétrique du parcours"
     >
+      <!-- Glow filter pour la ligne -->
+      <defs>
+        <filter id="line-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#A8FF00" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#A8FF00" stop-opacity="0.05" />
+        </linearGradient>
+      </defs>
+
       <!-- Lignes de référence horizontales -->
-      <g class="text-ink-300" stroke="currentColor" stroke-dasharray="3 4" stroke-width="0.6" fill="none">
+      <g stroke="#252B38" stroke-dasharray="3 4" stroke-width="0.6" fill="none">
         <line
           v-for="(r, i) in path.refLines"
           :key="`hl-${i}`"
@@ -88,7 +103,7 @@ const path = computed<Computed>(() => {
           :y2="r.y"
         />
       </g>
-      <g fill="#6B6B6B" font-size="11">
+      <g fill="#94A3B8" font-size="11">
         <text
           v-for="(r, i) in path.refLines"
           :key="`yl-${i}`"
@@ -100,9 +115,16 @@ const path = computed<Computed>(() => {
         </text>
       </g>
 
-      <!-- Aire verte + ligne -->
-      <path :d="path.area" fill="#D5E1B8" />
-      <path :d="path.d" fill="none" stroke="#7FA866" stroke-width="2" stroke-linejoin="round" />
+      <!-- Aire dégradée + ligne lime glow -->
+      <path :d="path.area" fill="url(#area-grad)" />
+      <path
+        :d="path.d"
+        fill="none"
+        stroke="#A8FF00"
+        stroke-width="2"
+        stroke-linejoin="round"
+        filter="url(#line-glow)"
+      />
 
       <!-- Axes X -->
       <line
@@ -110,10 +132,10 @@ const path = computed<Computed>(() => {
         :y1="VIEW_H - PAD.bottom"
         :x2="VIEW_W - PAD.right"
         :y2="VIEW_H - PAD.bottom"
-        stroke="#D6D2C8"
+        stroke="#252B38"
         stroke-width="0.8"
       />
-      <g fill="#6B6B6B" font-size="11">
+      <g fill="#94A3B8" font-size="11">
         <text
           v-for="(t, i) in path.xTicks"
           :key="`xt-${i}`"

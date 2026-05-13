@@ -89,8 +89,8 @@ function distLabel(ratio: number): string {
         </ul>
 
         <p v-if="terrain.forest > 0" class="text-sm text-ink-700">
-          <span class="inline-block h-2 w-2 align-middle rounded-pill bg-sage-600" />
-          <span class="ml-2 align-middle font-semibold">Portions en forêt :</span>
+          <span class="inline-block h-2 w-2 align-middle rounded-pill bg-neon-lime shadow-glow-lime" />
+          <span class="ml-2 align-middle font-semibold text-neon-lime">Portions en forêt :</span>
           <span class="ml-1 tabular-nums">{{ distLabel(terrain.forest) }}</span>
         </p>
       </template>

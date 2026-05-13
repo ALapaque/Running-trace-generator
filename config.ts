@@ -80,13 +80,13 @@ export const OVERPASS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 /** Précision du bbox utilisé comme clé de cache (degrés). */
 export const BBOX_CACHE_PRECISION = 0.01
 
-/** Couleurs des polylines par type de terrain (palette terre/sauge, style Komoot). */
+/** Couleurs des polylines par type de terrain (palette néon dark). */
 export const PATH_COLORS: Record<PathType | 'unknown', string> = {
-  route: '#1F6FEB',
-  chemin_large: '#A87B4E',
-  single: '#5B7A3F',
-  mixte: '#8B8F92',
-  unknown: '#A6ABAE',
+  route: '#00E5FF',
+  chemin_large: '#FF9F1C',
+  single: '#A8FF00',
+  mixte: '#B86DFF',
+  unknown: '#6B7280',
 }
 
 /** Profil dénivelé selon le type de côte demandé. */
