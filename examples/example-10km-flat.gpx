@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="RunGen" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Parcours RunGen - exemple 10km plat (Bruxelles - Bois de la Cambre)</name>
+    <time>2026-05-13T10:00:00Z</time>
+  </metadata>
+  <trk>
+    <name>10.2km - 35m D+</name>
+    <trkseg>
+      <trkpt lat="50.806000" lon="4.378500"><ele>92.5</ele></trkpt>
+      <trkpt lat="50.806500" lon="4.379200"><ele>92.8</ele></trkpt>
+      <trkpt lat="50.807100" lon="4.379900"><ele>93.4</ele></trkpt>
+      <trkpt lat="50.807800" lon="4.380700"><ele>94.2</ele></trkpt>
+      <trkpt lat="50.808500" lon="4.381500"><ele>95.1</ele></trkpt>
+      <trkpt lat="50.809300" lon="4.382300"><ele>96.0</ele></trkpt>
+      <trkpt lat="50.810100" lon="4.383100"><ele>97.2</ele></trkpt>
+      <trkpt lat="50.810900" lon="4.384000"><ele>98.0</ele></trkpt>
+      <trkpt lat="50.811800" lon="4.384800"><ele>99.5</ele></trkpt>
+      <trkpt lat="50.812700" lon="4.385600"><ele>100.8</ele></trkpt>
+      <trkpt lat="50.813600" lon="4.386500"><ele>102.0</ele></trkpt>
+      <trkpt lat="50.814500" lon="4.387400"><ele>103.4</ele></trkpt>
+      <trkpt lat="50.815400" lon="4.388200"><ele>104.5</ele></trkpt>
+      <trkpt lat="50.816300" lon="4.389100"><ele>105.7</ele></trkpt>
+      <trkpt lat="50.817200" lon="4.389900"><ele>106.8</ele></trkpt>
+      <trkpt lat="50.818100" lon="4.390800"><ele>108.0</ele></trkpt>
+      <trkpt lat="50.819000" lon="4.391700"><ele>109.2</ele></trkpt>
+      <trkpt lat="50.819900" lon="4.392500"><ele>110.5</ele></trkpt>
+      <trkpt lat="50.820800" lon="4.393400"><ele>111.7</ele></trkpt>
+      <trkpt lat="50.821700" lon="4.394200"><ele>112.8</ele></trkpt>
+      <trkpt lat="50.822600" lon="4.395100"><ele>113.5</ele></trkpt>
+      <trkpt lat="50.823500" lon="4.395900"><ele>114.0</ele></trkpt>
+      <trkpt lat="50.824400" lon="4.396800"><ele>114.2</ele></trkpt>
+      <trkpt lat="50.825300" lon="4.397600"><ele>114.3</ele></trkpt>
+      <trkpt lat="50.826200" lon="4.398500"><ele>114.0</ele></trkpt>
+      <trkpt lat="50.827000" lon="4.399300"><ele>113.5</ele></trkpt>
+      <trkpt lat="50.827800" lon="4.400200"><ele>112.8</ele></trkpt>
+      <trkpt lat="50.828600" lon="4.401000"><ele>112.0</ele></trkpt>
+      <trkpt lat="50.829300" lon="4.401900"><ele>111.0</ele></trkpt>
+      <trkpt lat="50.830100" lon="4.402800"><ele>110.0</ele></trkpt>
+      <trkpt lat="50.829800" lon="4.403800"><ele>109.0</ele></trkpt>
+      <trkpt lat="50.829100" lon="4.404500"><ele>107.8</ele></trkpt>
+      <trkpt lat="50.828200" lon="4.405100"><ele>106.5</ele></trkpt>
+      <trkpt lat="50.827300" lon="4.405700"><ele>105.2</ele></trkpt>
+      <trkpt lat="50.826400" lon="4.406200"><ele>103.8</ele></trkpt>
+      <trkpt lat="50.825500" lon="4.406700"><ele>102.5</ele></trkpt>
+      <trkpt lat="50.824600" lon="4.407100"><ele>101.0</ele></trkpt>
+      <trkpt lat="50.823700" lon="4.407500"><ele>99.5</ele></trkpt>
+      <trkpt lat="50.822800" lon="4.407800"><ele>98.0</ele></trkpt>
+      <trkpt lat="50.821900" lon="4.408000"><ele>96.5</ele></trkpt>
+      <trkpt lat="50.821000" lon="4.408200"><ele>95.2</ele></trkpt>
+      <trkpt lat="50.820000" lon="4.408300"><ele>94.0</ele></trkpt>
+      <trkpt lat="50.819000" lon="4.408300"><ele>93.0</ele></trkpt>
+      <trkpt lat="50.818000" lon="4.408200"><ele>92.2</ele></trkpt>
+      <trkpt lat="50.817000" lon="4.408000"><ele>91.5</ele></trkpt>
+      <trkpt lat="50.816000" lon="4.407800"><ele>91.0</ele></trkpt>
+      <trkpt lat="50.815000" lon="4.407500"><ele>90.5</ele></trkpt>
+      <trkpt lat="50.814000" lon="4.407100"><ele>90.0</ele></trkpt>
+      <trkpt lat="50.813000" lon="4.406700"><ele>89.7</ele></trkpt>
+      <trkpt lat="50.812000" lon="4.406200"><ele>89.5</ele></trkpt>
+      <trkpt lat="50.811000" lon="4.405700"><ele>89.3</ele></trkpt>
+      <trkpt lat="50.810000" lon="4.405100"><ele>89.2</ele></trkpt>
+      <trkpt lat="50.809000" lon="4.404500"><ele>89.2</ele></trkpt>
+      <trkpt lat="50.808000" lon="4.403800"><ele>89.3</ele></trkpt>
+      <trkpt lat="50.807000" lon="4.403000"><ele>89.5</ele></trkpt>
+      <trkpt lat="50.806000" lon="4.402200"><ele>89.8</ele></trkpt>
+      <trkpt lat="50.805100" lon="4.401300"><ele>90.0</ele></trkpt>
+      <trkpt lat="50.804300" lon="4.400300"><ele>90.3</ele></trkpt>
+      <trkpt lat="50.803600" lon="4.399200"><ele>90.5</ele></trkpt>
+      <trkpt lat="50.803000" lon="4.398100"><ele>90.8</ele></trkpt>
+      <trkpt lat="50.802500" lon="4.397000"><ele>91.0</ele></trkpt>
+      <trkpt lat="50.802100" lon="4.395800"><ele>91.2</ele></trkpt>
+      <trkpt lat="50.801800" lon="4.394600"><ele>91.3</ele></trkpt>
+      <trkpt lat="50.801600" lon="4.393400"><ele>91.4</ele></trkpt>
+      <trkpt lat="50.801500" lon="4.392200"><ele>91.5</ele></trkpt>
+      <trkpt lat="50.801500" lon="4.391000"><ele>91.5</ele></trkpt>
+      <trkpt lat="50.801600" lon="4.389800"><ele>91.6</ele></trkpt>
+      <trkpt lat="50.801800" lon="4.388600"><ele>91.7</ele></trkpt>
+      <trkpt lat="50.802100" lon="4.387400"><ele>91.8</ele></trkpt>
+      <trkpt lat="50.802500" lon="4.386300"><ele>91.9</ele></trkpt>
+      <trkpt lat="50.803000" lon="4.385200"><ele>92.0</ele></trkpt>
+      <trkpt lat="50.803600" lon="4.384100"><ele>92.1</ele></trkpt>
+      <trkpt lat="50.804300" lon="4.383100"><ele>92.2</ele></trkpt>
+      <trkpt lat="50.805100" lon="4.382100"><ele>92.3</ele></trkpt>
+      <trkpt lat="50.806000" lon="4.381200"><ele>92.4</ele></trkpt>
+      <trkpt lat="50.806000" lon="4.378500"><ele>92.5</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
