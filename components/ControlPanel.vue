@@ -108,6 +108,8 @@ async function useCurrentPosition(): Promise<void> {
   try {
     const pos = await geo.request()
     emit('pickStart', pos)
+    // Mise à jour programmatique du champ → ne pas relancer de recherche.
+    suppressGeocode = true
     geocodeQuery.value = t('control.myLocation')
     geocodeResults.value = []
   } catch {
@@ -119,6 +121,8 @@ const geocodeQuery = ref('')
 const geocodeResults = ref<GeocodeResult[]>([])
 const geocoding = ref(false)
 let geocodeAbort: AbortController | null = null
+/** Saute la prochaine recherche déclenchée par une mise à jour programmatique. */
+let suppressGeocode = false
 const { search } = useGeocoding()
 
 async function runGeocode(): Promise<void> {
@@ -141,10 +145,17 @@ async function runGeocode(): Promise<void> {
 let geocodeTimer: ReturnType<typeof setTimeout> | null = null
 watch(geocodeQuery, () => {
   if (geocodeTimer) clearTimeout(geocodeTimer)
+  // Changement programmatique (géoloc / sélection d'un résultat) : on ne
+  // relance pas de recherche, sinon un résultat parasite réapparaît.
+  if (suppressGeocode) {
+    suppressGeocode = false
+    return
+  }
   geocodeTimer = setTimeout(runGeocode, 350)
 })
 
 function selectGeocode(r: GeocodeResult): void {
+  suppressGeocode = true
   emit('pickStart', r.position)
   geocodeResults.value = []
   geocodeQuery.value = r.label
