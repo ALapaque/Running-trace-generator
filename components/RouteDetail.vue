@@ -14,6 +14,7 @@ import { useI18n } from '../composables/useI18n'
 import { computeDifficulty } from '../utils/difficulty'
 import { formatPace } from '../utils/pace'
 import type { AnalyzedRoute } from '../types'
+import type { RoutePoint } from '../types/ors'
 
 const props = defineProps<{
   route: AnalyzedRoute
@@ -27,6 +28,8 @@ const emit = defineEmits<{
   (e: 'cyclePace'): void
   (e: 'toggleReverse'): void
   (e: 'edit'): void
+  /** Point survolé sur le profil altimétrique (à matérialiser sur la carte). */
+  (e: 'hoverPoint', point: RoutePoint | null): void
 }>()
 
 const { t } = useI18n()
@@ -78,7 +81,7 @@ const difficulty = computed(() =>
     </div>
 
     <div class="animate-reveal" style="animation-delay: 120ms">
-      <ElevationChart :points="route.points" />
+      <ElevationChart :points="route.points" @hover="emit('hoverPoint', $event)" />
     </div>
 
     <!-- Répartition du terrain : affichée uniquement si l'analyse a réussi -->

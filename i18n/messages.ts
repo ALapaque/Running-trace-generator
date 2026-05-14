@@ -37,7 +37,14 @@ export const fr = {
     'Très difficile': 'Très difficile',
   },
 
-  elevation: { title: 'Élévation' },
+  elevation: {
+    title: 'Élévation',
+    summary: 'Profil altimétrique sur {dist} km, altitude de {min} à {max} mètres.',
+  },
+
+  hints: {
+    firstRun: 'Touchez la carte ou cherchez une adresse pour définir le point de départ.',
+  },
 
   terrain: {
     title: 'Types de voies',
@@ -201,7 +208,14 @@ export const en: typeof fr = {
     'Très difficile': 'Very hard',
   },
 
-  elevation: { title: 'Elevation' },
+  elevation: {
+    title: 'Elevation',
+    summary: 'Elevation profile over {dist} km, altitude from {min} to {max} metres.',
+  },
+
+  hints: {
+    firstRun: 'Tap the map or search an address to set your start point.',
+  },
 
   terrain: {
     title: 'Path types',

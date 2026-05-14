@@ -36,7 +36,7 @@ import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/shar
 import { reverseRoute } from '../utils/route-ops'
 import { climbConcentration } from '../utils/climbs'
 import type { AnalyzedRoute, GenerationParams, RouteCandidate, TerrainStats } from '../types'
-import type { LatLng } from '../types/ors'
+import type { LatLng, RoutePoint } from '../types/ors'
 
 type TabKey = 'settings' | 'alternatives' | 'history'
 
@@ -69,6 +69,8 @@ const lastParams = ref<GenerationParams | null>(null)
 const viewedHistoryRoute = ref<AnalyzedRoute | null>(null)
 /** Sens inversé du parcours affiché (transformation locale, sans appel réseau). */
 const reversed = ref(false)
+/** Point survolé sur le profil altimétrique — matérialisé sur la carte. */
+const highlightPoint = ref<RoutePoint | null>(null)
 
 // --- Édition manuelle du tracé ---
 const { routeThroughWaypoints } = useRouteGenerator()
@@ -152,6 +154,15 @@ const loading = computed(
 
 const hasResults = computed(() => pipeline.results.value.length > 0)
 
+/** Indice de premier lancement : tant qu'aucun parcours n'est à l'écran. */
+const showFirstRunHint = computed(
+  () =>
+    pipeline.stage.value === 'idle' &&
+    !hasResults.value &&
+    !viewedHistoryRoute.value &&
+    !editMode.value,
+)
+
 /**
  * Espace (px) à réserver en bas du fitBounds.
  * - Mobile : hauteur du bottom sheet selon son snap.
@@ -171,11 +182,16 @@ const sheetBottomInset = computed(() => {
   }
 })
 
-/** Position du cluster de FABs zoom/recentrage (au-dessus du sheet sur mobile). */
+/**
+ * Position du cluster de FABs zoom/recentrage (et de la légende), au-dessus du
+ * sheet sur mobile. `env(safe-area-inset-bottom)` dégage la barre gestuelle.
+ */
 const fabClusterStyle = computed(() => {
-  if (isDesktop.value) return { bottom: '24px' }
+  if (isDesktop.value) {
+    return { bottom: 'calc(24px + env(safe-area-inset-bottom))' }
+  }
   const base = snap.value === 'peek' ? '180px' : snap.value === 'mid' ? '55dvh' : '88dvh'
-  return { bottom: `calc(${base} + 12px)` }
+  return { bottom: `calc(${base} + 12px + env(safe-area-inset-bottom))` }
 })
 
 const tabs = computed<Tab[]>(() => [
@@ -355,6 +371,11 @@ onMounted(() => {
 watch(activeTab, (t) => {
   if (t === 'settings' && snap.value === 'peek') snap.value = 'full'
 })
+
+// Changer de parcours affiché retire la pastille de survol du profil.
+watch(selectedRoute, () => {
+  highlightPoint.value = null
+})
 </script>
 
 <template>
@@ -371,6 +392,7 @@ watch(activeTab, (t) => {
         :bottom-inset="sheetBottomInset"
         :editable="editMode"
         :editable-waypoints="editableWaypoints"
+        :highlight-point="highlightPoint"
         @pickStart="onPickStart"
         @waypointMoved="onWaypointMoved"
       />
@@ -440,6 +462,26 @@ watch(activeTab, (t) => {
     >
       <MapLegend class="pointer-events-auto" :terrain="selectedRoute.terrain" />
     </div>
+
+    <!-- Indice de premier lancement — guide vers le placement du départ.
+         Mutuellement exclusif avec le LoadingOverlay (idle vs génération). -->
+    <transition
+      enter-active-class="transition-opacity duration-200 ease-out-soft"
+      leave-active-class="transition-opacity duration-200 ease-in-soft"
+      enter-from-class="opacity-0"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="showFirstRunHint"
+        class="pointer-events-none absolute inset-x-0 top-6 z-hud mx-auto flex w-fit max-w-[88vw] justify-center px-3"
+      >
+        <p
+          class="rounded-pill bg-cream-100 px-4 py-2 text-xs font-medium text-ink-700 shadow-float ring-1 ring-cream-300"
+        >
+          {{ t('hints.firstRun') }}
+        </p>
+      </div>
+    </transition>
 
     <!-- Loading overlay (toast en haut) -->
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />
@@ -531,6 +573,7 @@ watch(activeTab, (t) => {
                 @cyclePace="cyclePace"
                 @toggleReverse="reversed = !reversed"
                 @edit="enterEditMode"
+                @hoverPoint="highlightPoint = $event"
               />
             </template>
           </RouteAlternatives>
@@ -555,6 +598,7 @@ watch(activeTab, (t) => {
                 @cyclePace="cyclePace"
                 @toggleReverse="reversed = !reversed"
                 @edit="enterEditMode"
+                @hoverPoint="highlightPoint = $event"
               />
             </template>
           </RouteHistory>
