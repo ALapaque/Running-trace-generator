@@ -18,13 +18,14 @@ import ControlPanel, { type ControlPanelSubmit } from '../components/ControlPane
 import ElevationChart from '../components/ElevationChart.vue'
 import ExportMenu from '../components/ExportMenu.vue'
 import FloatingButton from '../components/FloatingButton.vue'
+import FloatingPanel from '../components/FloatingPanel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import MapView from '../components/MapView.vue'
 import RouteAlternatives from '../components/RouteAlternatives.vue'
 import RouteStats from '../components/RouteStats.vue'
 import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
 import TerrainBreakdown from '../components/TerrainBreakdown.vue'
-import { useGpxExport } from '../composables/useGpxExport'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
 import type { LatLng } from '../types/ors'
 
@@ -39,6 +40,21 @@ let abort: AbortController | null = null
 const pipeline = useRoutePipeline()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
+
+// Desktop ≥ 1024px → sidebar flottante draggable ; sinon bottom sheet.
+const isDesktop = useMediaQuery('(min-width: 1024px)')
+const panelComponent = computed(() => (isDesktop.value ? FloatingPanel : BottomSheet))
+const panelProps = computed(() =>
+  isDesktop.value
+    ? {}
+    : {
+        snap: snap.value,
+        'onUpdate:snap': (v: SheetSnap) => {
+          snap.value = v
+        },
+        peekPx: 172,
+      },
+)
 
 function triggerSubmit(): void {
   cpRef.value?.submit()
@@ -59,12 +75,13 @@ const loading = computed(
 const hasResults = computed(() => pipeline.results.value.length > 0)
 
 /**
- * Hauteur (px) occupée par le bottom sheet selon son snap.
- * Passée à MapView pour réserver cet espace dans le fitBounds → le tracé
- * reste centré dans la portion de carte réellement visible.
+ * Espace (px) à réserver en bas du fitBounds.
+ * - Mobile : hauteur du bottom sheet selon son snap.
+ * - Desktop : 0 — la sidebar flotte sur un coin et est déplaçable, on ne
+ *   réserve donc pas d'espace fixe.
  */
 const sheetBottomInset = computed(() => {
-  if (typeof window === 'undefined') return 200
+  if (isDesktop.value || typeof window === 'undefined') return 0
   const vh = window.innerHeight
   switch (snap.value) {
     case 'full':
@@ -74,6 +91,13 @@ const sheetBottomInset = computed(() => {
     default:
       return 172
   }
+})
+
+/** Position du cluster de FABs zoom/recentrage (au-dessus du sheet sur mobile). */
+const fabClusterStyle = computed(() => {
+  if (isDesktop.value) return { bottom: '24px' }
+  const base = snap.value === 'peek' ? '180px' : snap.value === 'mid' ? '55dvh' : '88dvh'
+  return { bottom: `calc(${base} + 12px)` }
 })
 
 const tabs = computed<Tab[]>(() => [
@@ -142,8 +166,9 @@ watch(activeTab, (t) => {
       class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3"
       style="padding-top: max(0.75rem, env(safe-area-inset-top));"
     >
-      <!-- Top-left : menu paramètres / piéton -->
-      <div class="pointer-events-auto flex flex-col gap-2">
+      <!-- Top-left : menu paramètres / piéton (mobile uniquement —
+           sur desktop la sidebar flottante remplace ces raccourcis) -->
+      <div v-if="!isDesktop" class="pointer-events-auto flex flex-col gap-2">
          <FloatingButton
           label="Ouvrir les paramètres"
           @click="(activeTab = 'settings'), (snap = 'full')"
@@ -184,18 +209,13 @@ watch(activeTab, (t) => {
       </div>
     </div>
 
-    <!-- FABs droite : zoom + recenter (placés au-dessus du peek du sheet) -->
+    <!-- FABs droite : zoom + recenter (au-dessus du sheet sur mobile,
+         coin bas-droit fixe sur desktop) -->
     <div
       class="pointer-events-none absolute right-3 z-20 flex flex-col gap-2"
-      :style="{ bottom: `calc(${snap === 'peek' ? '180px' : snap === 'mid' ? '55dvh' : '88dvh'} + 12px)` }"
+      :style="fabClusterStyle"
     >
       <div class="pointer-events-auto flex flex-col gap-2">
-        <FloatingButton label="Rechercher" @click="(activeTab = 'settings'), (snap = 'full')">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </FloatingButton>
         <FloatingButton label="Recentrer la carte" @click="mapRef?.recenter()">
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3" />
@@ -222,8 +242,9 @@ watch(activeTab, (t) => {
     <!-- Loading overlay (toast en haut) -->
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />
 
-    <!-- Bottom sheet -->
-    <BottomSheet v-model:snap="snap" :peek-px="172">
+    <!-- Panneau : bottom sheet (mobile) ou sidebar flottante (desktop).
+         Même API de slots → contenu défini une seule fois. -->
+    <component :is="panelComponent" v-bind="panelProps">
       <!-- Header fixe : onglets (toujours visibles, hors scroll) -->
       <template #header>
         <SheetTabs v-model="activeTab" :tabs="tabs" />
@@ -318,6 +339,6 @@ watch(activeTab, (t) => {
           </span>
         </button>
       </template>
-    </BottomSheet>
+    </component>
   </div>
 </template>
