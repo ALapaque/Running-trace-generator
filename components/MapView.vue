@@ -43,6 +43,8 @@ let marker: import('leaflet').Marker | null = null
 let routeLayer: import('leaflet').LayerGroup | null = null
 let editLayer: import('leaflet').LayerGroup | null = null
 let LRef: typeof import('leaflet') | null = null
+/** rAF de l'animation « tracé qui se dessine » — annulé au redraw / démontage. */
+let drawRaf = 0
 
 async function loadLeaflet(): Promise<typeof import('leaflet')> {
   if (LRef) return LRef
@@ -140,6 +142,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  cancelAnimationFrame(drawRaf)
   if (map) {
     map.remove()
     map = null
@@ -200,56 +203,112 @@ async function drawEditWaypoints(): Promise<void> {
   })
 }
 
+interface ColorSeg {
+  color: string
+  /** Indices inclusifs dans route.points. */
+  start: number
+  end: number
+}
+
+/** Découpe le tracé en segments colorés contigus selon le type de chemin. */
+function buildColorSegments(route: AnalyzedRoute): ColorSeg[] {
+  const lastIdx = route.points.length - 1
+  if (route.terrainFallback || route.segments.length === 0) {
+    return [{ color: ROUTE_DEFAULT_COLOR, start: 0, end: lastIdx }]
+  }
+  const segs: ColorSeg[] = []
+  const ratio = route.points.length / route.segments.length
+  let bucketStart = 0
+  let currentType = route.segments[0]!.pathType
+  for (let i = 1; i <= route.segments.length; i++) {
+    const type = i < route.segments.length ? route.segments[i]!.pathType : currentType
+    if (type !== currentType || i === route.segments.length) {
+      const bucketEnd = Math.min(lastIdx, Math.round(i * ratio))
+      if (bucketEnd > bucketStart) {
+        segs.push({
+          color: PATH_COLORS[currentType as keyof typeof PATH_COLORS] ?? PATH_COLORS.unknown,
+          start: bucketStart,
+          end: bucketEnd,
+        })
+      }
+      bucketStart = bucketEnd
+      currentType = type
+    }
+  }
+  return segs.length > 0 ? segs : [{ color: ROUTE_DEFAULT_COLOR, start: 0, end: lastIdx }]
+}
+
+function addWaypoints(L: typeof import('leaflet'), route: AnalyzedRoute): void {
+  if (props.showWaypoints === false || props.editable || route.points.length <= 10) return
+  const total = route.points.length
+  for (let i = 1; i <= 10; i++) {
+    const idx = Math.min(total - 1, Math.floor((total / 10) * i))
+    const p = route.points[idx]!
+    L.marker([p.lat, p.lng], { icon: makeWaypointIcon(L, i), interactive: false }).addTo(
+      routeLayer!,
+    )
+  }
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
 async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
   if (!map || !routeLayer) return
   const L = await loadLeaflet()
+  cancelAnimationFrame(drawRaf)
   routeLayer.clearLayers()
   if (!route) return
 
-  // Polyline unicolore quand l'analyse de terrain est indisponible.
-  if (route.terrainFallback || route.segments.length === 0) {
-    L.polyline(
-      route.points.map((p) => [p.lat, p.lng]),
-      { color: ROUTE_DEFAULT_COLOR, weight: 5, opacity: 0.95 },
-    ).addTo(routeLayer)
-  } else {
-    const ratio = route.points.length / route.segments.length
-    let bucketStart = 0
-    let currentType = route.segments[0]!.pathType
-    for (let i = 1; i <= route.segments.length; i++) {
-      const type = i < route.segments.length ? route.segments[i]!.pathType : currentType
-      if (type !== currentType || i === route.segments.length) {
-        const bucketEnd = Math.min(route.points.length, Math.round(i * ratio))
-        const slice = route.points.slice(bucketStart, bucketEnd + 1)
-        if (slice.length >= 2) {
-          L.polyline(
-            slice.map((p) => [p.lat, p.lng]),
-            {
-              color: PATH_COLORS[currentType as keyof typeof PATH_COLORS] ?? PATH_COLORS.unknown,
-              weight: 5,
-              opacity: 1,
-            },
-          ).addTo(routeLayer)
-        }
-        bucketStart = bucketEnd
-        currentType = type
-      }
-    }
+  const segs = buildColorSegments(route)
+  const latlngs = route.points.map((p) => [p.lat, p.lng] as [number, number])
+  const opacityFor = (color: string) => (color === ROUTE_DEFAULT_COLOR ? 0.95 : 1)
+
+  // Une polyline (vide au départ) par segment coloré.
+  const lines = segs.map((s) =>
+    L.polyline([], { color: s.color, weight: 5, opacity: opacityFor(s.color) }).addTo(
+      routeLayer!,
+    ),
+  )
+
+  /** Affiche le tracé jusqu'au point `reveal` inclus. */
+  const renderUpTo = (reveal: number): void => {
+    segs.forEach((s, idx) => {
+      const end = Math.min(s.end, reveal)
+      lines[idx]!.setLatLngs(end > s.start ? latlngs.slice(s.start, end + 1) : [])
+    })
   }
 
-  // Marqueurs numérotés sur 10 paliers réguliers (masqués en mode édition).
-  if (props.showWaypoints !== false && !props.editable && route.points.length > 10) {
-    const total = route.points.length
-    for (let i = 1; i <= 10; i++) {
-      const idx = Math.min(total - 1, Math.floor((total / 10) * i))
-      const p = route.points[idx]!
-      L.marker([p.lat, p.lng], { icon: makeWaypointIcon(L, i), interactive: false }).addTo(
-        routeLayer,
-      )
-    }
+  // Recadre d'abord, puis dessine dans la zone visible.
+  map.fitBounds(L.latLngBounds(latlngs), boundsPadding())
+
+  const lastIdx = route.points.length - 1
+  // Pas d'animation en mode édition (re-routages fréquents) ni si reduced-motion.
+  if (props.editable || prefersReducedMotion() || lastIdx < 8) {
+    renderUpTo(lastIdx)
+    addWaypoints(L, route)
+    return
   }
 
-  fitRoute()
+  // Révélation progressive : le tracé « se dessine » du départ vers l'arrivée.
+  const DURATION_MS = 750
+  const easeOut = (t: number) => 1 - (1 - t) ** 3
+  const startT = performance.now()
+  const step = (now: number): void => {
+    const t = Math.min(1, (now - startT) / DURATION_MS)
+    renderUpTo(Math.floor(lastIdx * easeOut(t)))
+    if (t < 1) {
+      drawRaf = requestAnimationFrame(step)
+    } else {
+      renderUpTo(lastIdx)
+      addWaypoints(L, route)
+    }
+  }
+  drawRaf = requestAnimationFrame(step)
 }
 
 /** API exposée au parent. */
