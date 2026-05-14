@@ -33,9 +33,15 @@ export interface ControlPanelSubmit extends RouteGenerationInput {
 interface FormState {
   mode: RouteGenerationInput['mode']
   useDistance: boolean
+  /** Saisie en valeur exacte (sinon plage min–max). */
+  distanceExact: boolean
   distanceKm: { min: number; max: number }
+  /** Valeur cible quand `distanceExact`. */
+  distanceTargetKm: number
   useElevation: boolean
+  elevationExact: boolean
   elevationGainM: { min: number; max: number }
+  elevationTargetM: number
   hills: RouteGenerationInput['hills']
   resultsCount: ResultsCount
 }
@@ -47,9 +53,13 @@ function defaultForm(): FormState {
   return {
     mode: 'running',
     useDistance: true,
+    distanceExact: false,
     distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
+    distanceTargetKm: 10,
     useElevation: false,
+    elevationExact: false,
     elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
+    elevationTargetM: 200,
     hills: 'vallonné',
     resultsCount: DEFAULT_RESULTS_COUNT,
   }
@@ -58,12 +68,19 @@ function defaultForm(): FormState {
 /** Traduit des GenerationParams (URL/historique) en état de formulaire. */
 function formFromParams(p: GenerationParams): FormState {
   const base = defaultForm()
+  // Une plage min===max provient d'une saisie en valeur exacte.
+  const dExact = p.distanceKm !== null && p.distanceKm.min === p.distanceKm.max
+  const eExact = p.elevationGainM !== null && p.elevationGainM.min === p.elevationGainM.max
   return {
     mode: p.mode,
     useDistance: p.distanceKm !== null,
-    distanceKm: p.distanceKm ?? base.distanceKm,
+    distanceExact: dExact,
+    distanceKm: p.distanceKm && !dExact ? p.distanceKm : base.distanceKm,
+    distanceTargetKm: dExact ? p.distanceKm!.min : base.distanceTargetKm,
     useElevation: p.elevationGainM !== null,
-    elevationGainM: p.elevationGainM ?? base.elevationGainM,
+    elevationExact: eExact,
+    elevationGainM: p.elevationGainM && !eExact ? p.elevationGainM : base.elevationGainM,
+    elevationTargetM: eExact ? p.elevationGainM!.min : base.elevationTargetM,
     hills: p.hills,
     resultsCount: (p.resultsCount as ResultsCount) ?? base.resultsCount,
   }
@@ -161,12 +178,32 @@ function selectGeocode(r: GeocodeResult): void {
   geocodeQuery.value = r.label
 }
 
+/**
+ * Plage soumise pour un critère : `null` si inactif, `{v, v}` en valeur
+ * exacte (une plage dégénérée que le pipeline/scoring gère déjà via la
+ * tolérance), sinon la plage min–max.
+ */
+function rangeFor(
+  use: boolean,
+  exact: boolean,
+  range: { min: number; max: number },
+  target: number,
+): NumberRange | null {
+  if (!use) return null
+  return exact ? { min: target, max: target } : { ...range }
+}
+
 function onSubmit(): void {
   if (!valid.value) return
   emit('submit', {
     start: props.start as LatLng,
-    distanceKm: form.useDistance ? { ...form.distanceKm } : null,
-    elevationGainM: form.useElevation ? { ...form.elevationGainM } : null,
+    distanceKm: rangeFor(form.useDistance, form.distanceExact, form.distanceKm, form.distanceTargetKm),
+    elevationGainM: rangeFor(
+      form.useElevation,
+      form.elevationExact,
+      form.elevationGainM,
+      form.elevationTargetM,
+    ),
     mode: form.mode,
     hills: form.hills,
     resultsCount: form.resultsCount,
@@ -199,6 +236,34 @@ function commitRangeEdge(
   range[edge] =
     edge === 'min' ? Math.min(clamped, range.max) : Math.max(clamped, range.min)
   el.value = range[edge].toFixed(decimals)
+}
+
+/**
+ * Applique une valeur saisie au clavier sur une cible unique (mode exact) :
+ * snap au pas + clamp aux bornes. Renvoie la valeur retenue.
+ */
+function commitTarget(
+  current: number,
+  bounds: { min: number; max: number; step: number },
+  decimals: number,
+  e: Event,
+): number {
+  const el = e.target as HTMLInputElement
+  const raw = el.valueAsNumber
+  if (Number.isNaN(raw)) {
+    el.value = current.toFixed(decimals)
+    return current
+  }
+  const stepped = Math.round(raw / bounds.step) * bounds.step
+  const clamped = Math.min(Math.max(stepped, bounds.min), bounds.max)
+  el.value = clamped.toFixed(decimals)
+  return clamped
+}
+
+/** Dégradé de remplissage pour le slider de valeur exacte (portion atteinte). */
+function sliderFill(value: number, min: number, max: number): string {
+  const pct = max > min ? ((value - min) / (max - min)) * 100 : 0
+  return `linear-gradient(to right, #2F6B3F 0 ${pct}%, #E7E2D5 ${pct}% 100%)`
 }
 
 /** Entrée → on quitte le champ (déclenche le commit) sans soumettre le formulaire. */
@@ -324,7 +389,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-else-if="geocoding" class="mt-1 text-xs text-ink-500">{{ t('control.searching') }}</p>
     </section>
 
-      <!-- Distance (plage, optionnelle) -->
+      <!-- Distance — plage min–max ou valeur exacte -->
       <section class="py-4">
       <div class="flex items-center justify-between">
         <label class="flex cursor-pointer items-center gap-2">
@@ -337,47 +402,104 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         </label>
         <p v-if="form.useDistance" class="flex items-baseline gap-1">
           <input
+            v-if="form.distanceExact"
             type="number"
             class="range-num text-stat-sm tabular-nums"
-            :value="form.distanceKm.min.toFixed(1)"
+            :value="form.distanceTargetKm.toFixed(1)"
             :min="DISTANCE_BOUNDS_KM.min"
             :max="DISTANCE_BOUNDS_KM.max"
             :step="DISTANCE_BOUNDS_KM.step"
             inputmode="decimal"
-            :aria-label="`${t('control.distance')} ${t('control.min')}`"
-            @change="commitRangeEdge(form.distanceKm, 'min', DISTANCE_BOUNDS_KM, 1, $event)"
+            :aria-label="t('control.distance')"
+            @change="form.distanceTargetKm = commitTarget(form.distanceTargetKm, DISTANCE_BOUNDS_KM, 1, $event)"
             @keydown.enter.prevent="blurTarget"
           />
-          <span class="text-unit text-ink-500">–</span>
-          <input
-            type="number"
-            class="range-num text-stat-sm tabular-nums"
-            :value="form.distanceKm.max.toFixed(1)"
-            :min="DISTANCE_BOUNDS_KM.min"
-            :max="DISTANCE_BOUNDS_KM.max"
-            :step="DISTANCE_BOUNDS_KM.step"
-            inputmode="decimal"
-            :aria-label="`${t('control.distance')} ${t('control.max')}`"
-            @change="commitRangeEdge(form.distanceKm, 'max', DISTANCE_BOUNDS_KM, 1, $event)"
-            @keydown.enter.prevent="blurTarget"
-          />
+          <template v-else>
+            <input
+              type="number"
+              class="range-num text-stat-sm tabular-nums"
+              :value="form.distanceKm.min.toFixed(1)"
+              :min="DISTANCE_BOUNDS_KM.min"
+              :max="DISTANCE_BOUNDS_KM.max"
+              :step="DISTANCE_BOUNDS_KM.step"
+              inputmode="decimal"
+              :aria-label="`${t('control.distance')} ${t('control.min')}`"
+              @change="commitRangeEdge(form.distanceKm, 'min', DISTANCE_BOUNDS_KM, 1, $event)"
+              @keydown.enter.prevent="blurTarget"
+            />
+            <span class="text-unit text-ink-500">–</span>
+            <input
+              type="number"
+              class="range-num text-stat-sm tabular-nums"
+              :value="form.distanceKm.max.toFixed(1)"
+              :min="DISTANCE_BOUNDS_KM.min"
+              :max="DISTANCE_BOUNDS_KM.max"
+              :step="DISTANCE_BOUNDS_KM.step"
+              inputmode="decimal"
+              :aria-label="`${t('control.distance')} ${t('control.max')}`"
+              @change="commitRangeEdge(form.distanceKm, 'max', DISTANCE_BOUNDS_KM, 1, $event)"
+              @keydown.enter.prevent="blurTarget"
+            />
+          </template>
           <span class="text-unit text-ink-500">km</span>
         </p>
         <span v-else class="text-xs text-ink-500">{{ t('control.unconstrainedF') }}</span>
       </div>
+
+      <!-- Plage / valeur exacte -->
+      <div
+        v-if="form.useDistance"
+        class="mt-3 inline-flex rounded-pill bg-cream-50 p-0.5 ring-1 ring-cream-300"
+        role="radiogroup"
+        :aria-label="t('control.distance')"
+      >
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="!form.distanceExact"
+          class="rounded-pill px-3 py-1.5 text-xs font-semibold transition"
+          :class="!form.distanceExact ? 'bg-olive-900 text-white' : 'text-ink-500'"
+          @click="form.distanceExact = false"
+        >
+          {{ t('control.modeRange') }}
+        </button>
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="form.distanceExact"
+          class="rounded-pill px-3 py-1.5 text-xs font-semibold transition"
+          :class="form.distanceExact ? 'bg-olive-900 text-white' : 'text-ink-500'"
+          @click="form.distanceExact = true"
+        >
+          {{ t('control.modeExact') }}
+        </button>
+      </div>
+
       <RangeSlider
-        v-show="form.useDistance"
+        v-show="form.useDistance && !form.distanceExact"
         v-model="form.distanceKm"
-        class="mt-2"
+        class="mt-3"
         :min="DISTANCE_BOUNDS_KM.min"
         :max="DISTANCE_BOUNDS_KM.max"
         :step="DISTANCE_BOUNDS_KM.step"
         :aria-label="t('control.distance')"
         unit="km"
       />
+      <input
+        v-show="form.useDistance && form.distanceExact"
+        type="range"
+        class="mt-3 w-full"
+        :value="form.distanceTargetKm"
+        :min="DISTANCE_BOUNDS_KM.min"
+        :max="DISTANCE_BOUNDS_KM.max"
+        :step="DISTANCE_BOUNDS_KM.step"
+        :style="{ background: sliderFill(form.distanceTargetKm, DISTANCE_BOUNDS_KM.min, DISTANCE_BOUNDS_KM.max) }"
+        :aria-label="t('control.distance')"
+        @input="form.distanceTargetKm = Number(($event.target as HTMLInputElement).value)"
+      />
     </section>
 
-      <!-- Dénivelé positif (plage, optionnelle) -->
+      <!-- Dénivelé positif — plage min–max ou valeur exacte -->
       <section class="py-4">
       <div class="flex items-center justify-between">
         <label class="flex cursor-pointer items-center gap-2">
@@ -390,43 +512,100 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         </label>
         <p v-if="form.useElevation" class="flex items-baseline gap-1">
           <input
+            v-if="form.elevationExact"
             type="number"
             class="range-num text-stat-sm tabular-nums"
-            :value="form.elevationGainM.min"
+            :value="form.elevationTargetM"
             :min="ELEVATION_BOUNDS_M.min"
             :max="ELEVATION_BOUNDS_M.max"
             :step="ELEVATION_BOUNDS_M.step"
             inputmode="numeric"
-            :aria-label="`${t('control.elevation')} ${t('control.min')}`"
-            @change="commitRangeEdge(form.elevationGainM, 'min', ELEVATION_BOUNDS_M, 0, $event)"
+            :aria-label="t('control.elevation')"
+            @change="form.elevationTargetM = commitTarget(form.elevationTargetM, ELEVATION_BOUNDS_M, 0, $event)"
             @keydown.enter.prevent="blurTarget"
           />
-          <span class="text-unit text-ink-500">–</span>
-          <input
-            type="number"
-            class="range-num text-stat-sm tabular-nums"
-            :value="form.elevationGainM.max"
-            :min="ELEVATION_BOUNDS_M.min"
-            :max="ELEVATION_BOUNDS_M.max"
-            :step="ELEVATION_BOUNDS_M.step"
-            inputmode="numeric"
-            :aria-label="`${t('control.elevation')} ${t('control.max')}`"
-            @change="commitRangeEdge(form.elevationGainM, 'max', ELEVATION_BOUNDS_M, 0, $event)"
-            @keydown.enter.prevent="blurTarget"
-          />
+          <template v-else>
+            <input
+              type="number"
+              class="range-num text-stat-sm tabular-nums"
+              :value="form.elevationGainM.min"
+              :min="ELEVATION_BOUNDS_M.min"
+              :max="ELEVATION_BOUNDS_M.max"
+              :step="ELEVATION_BOUNDS_M.step"
+              inputmode="numeric"
+              :aria-label="`${t('control.elevation')} ${t('control.min')}`"
+              @change="commitRangeEdge(form.elevationGainM, 'min', ELEVATION_BOUNDS_M, 0, $event)"
+              @keydown.enter.prevent="blurTarget"
+            />
+            <span class="text-unit text-ink-500">–</span>
+            <input
+              type="number"
+              class="range-num text-stat-sm tabular-nums"
+              :value="form.elevationGainM.max"
+              :min="ELEVATION_BOUNDS_M.min"
+              :max="ELEVATION_BOUNDS_M.max"
+              :step="ELEVATION_BOUNDS_M.step"
+              inputmode="numeric"
+              :aria-label="`${t('control.elevation')} ${t('control.max')}`"
+              @change="commitRangeEdge(form.elevationGainM, 'max', ELEVATION_BOUNDS_M, 0, $event)"
+              @keydown.enter.prevent="blurTarget"
+            />
+          </template>
           <span class="text-unit text-ink-500">m</span>
         </p>
         <span v-else class="text-xs text-ink-500">{{ t('control.unconstrainedM') }}</span>
       </div>
+
+      <!-- Plage / valeur exacte -->
+      <div
+        v-if="form.useElevation"
+        class="mt-3 inline-flex rounded-pill bg-cream-50 p-0.5 ring-1 ring-cream-300"
+        role="radiogroup"
+        :aria-label="t('control.elevation')"
+      >
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="!form.elevationExact"
+          class="rounded-pill px-3 py-1.5 text-xs font-semibold transition"
+          :class="!form.elevationExact ? 'bg-olive-900 text-white' : 'text-ink-500'"
+          @click="form.elevationExact = false"
+        >
+          {{ t('control.modeRange') }}
+        </button>
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="form.elevationExact"
+          class="rounded-pill px-3 py-1.5 text-xs font-semibold transition"
+          :class="form.elevationExact ? 'bg-olive-900 text-white' : 'text-ink-500'"
+          @click="form.elevationExact = true"
+        >
+          {{ t('control.modeExact') }}
+        </button>
+      </div>
+
       <RangeSlider
-        v-show="form.useElevation"
+        v-show="form.useElevation && !form.elevationExact"
         v-model="form.elevationGainM"
-        class="mt-2"
+        class="mt-3"
         :min="ELEVATION_BOUNDS_M.min"
         :max="ELEVATION_BOUNDS_M.max"
         :step="ELEVATION_BOUNDS_M.step"
         :aria-label="t('control.elevation')"
         unit="m"
+      />
+      <input
+        v-show="form.useElevation && form.elevationExact"
+        type="range"
+        class="mt-3 w-full"
+        :value="form.elevationTargetM"
+        :min="ELEVATION_BOUNDS_M.min"
+        :max="ELEVATION_BOUNDS_M.max"
+        :step="ELEVATION_BOUNDS_M.step"
+        :style="{ background: sliderFill(form.elevationTargetM, ELEVATION_BOUNDS_M.min, ELEVATION_BOUNDS_M.max) }"
+        :aria-label="t('control.elevation')"
+        @input="form.elevationTargetM = Number(($event.target as HTMLInputElement).value)"
       />
     </section>
 
