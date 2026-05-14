@@ -107,10 +107,13 @@ const path = computed<Computed>(() => {
         </text>
       </g>
 
-      <!-- Aire dégradée + ligne verte -->
-      <path :d="path.area" fill="url(#area-grad)" />
+      <!-- Aire dégradée + ligne verte. `:key` rejoue l'anim au changement de tracé. -->
+      <path :key="`area-${path.d.length}`" class="chart-area" :d="path.area" fill="url(#area-grad)" />
       <path
+        :key="`line-${path.d.length}`"
+        class="chart-line"
         :d="path.d"
+        pathLength="1"
         fill="none"
         stroke="#2F6B3F"
         stroke-width="2"

@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { PACE_MIN_PER_KM } from '../config'
+import { useCountUp } from '../composables/useCountUp'
 import type { AnalyzedRoute } from '../types'
 
 const props = defineProps<{ route: AnalyzedRoute }>()
 
-const distanceKm = computed(() => props.route.distanceM / 1000)
-const durationMin = computed(() => distanceKm.value * PACE_MIN_PER_KM)
+// Valeurs animées (count-up) — réagissent au changement de parcours.
+const distanceKm = useCountUp(() => props.route.distanceM / 1000)
+const gainM = useCountUp(() => props.route.elevationGainM)
+const lossM = useCountUp(() => props.route.elevationLossM)
+const durationMin = useCountUp(() => (props.route.distanceM / 1000) * PACE_MIN_PER_KM)
+
 const hh = computed(() => Math.floor(durationMin.value / 60))
 const mm = computed(() => Math.round(durationMin.value % 60))
 const timeLabel = computed(() =>
@@ -15,7 +20,7 @@ const timeLabel = computed(() =>
 </script>
 
 <template>
-  <!-- Rangée de 4 stats type Komoot : gros chiffre + unité petite + label dessous -->
+  <!-- Rangée de 4 stats : gros chiffre animé + unité + label -->
   <div class="grid grid-cols-4 gap-2">
     <div class="flex flex-col items-start">
       <p class="flex items-baseline gap-1">
@@ -37,7 +42,7 @@ const timeLabel = computed(() =>
 
     <div class="flex flex-col items-start">
       <p class="flex items-baseline gap-1">
-        <span class="text-stat tabular-nums">{{ Math.round(route.elevationGainM) }}</span>
+        <span class="text-stat tabular-nums">{{ Math.round(gainM) }}</span>
         <span class="text-unit text-ink-500">m</span>
       </p>
       <p class="mt-1 text-label text-ink-500">Dénivelé</p>
@@ -45,13 +50,12 @@ const timeLabel = computed(() =>
 
     <div class="flex flex-col items-start">
       <p class="flex items-baseline gap-1">
-        <span class="text-stat tabular-nums">{{ Math.round(route.elevationLossM) }}</span>
+        <span class="text-stat tabular-nums">{{ Math.round(lossM) }}</span>
         <span class="text-unit text-ink-500">m</span>
       </p>
       <p class="mt-1 text-label text-ink-500">Dén. nég.</p>
     </div>
 
-    <!-- timeLabel : utilisé pour aria, reste accessible -->
     <span class="sr-only">{{ timeLabel }}</span>
   </div>
 </template>

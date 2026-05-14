@@ -55,7 +55,12 @@ void props
     </p>
 
     <ul v-else class="space-y-2">
-      <li v-for="entry in entries" :key="entry.id">
+      <li
+        v-for="(entry, i) in entries"
+        :key="entry.id"
+        class="animate-reveal"
+        :style="{ animationDelay: `${i * 40}ms` }"
+      >
         <div
           :class="[
             'flex items-center gap-3 rounded-card border p-3 transition',

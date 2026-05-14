@@ -3,7 +3,7 @@
  * Bar chart empilé + liste des types avec indicateur "tiret coloré" + distance estimée.
  * Komoot-style : section pliable, valeurs alignées à droite en tabular-nums.
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { PATH_COLORS } from '../config'
 import type { TerrainStats } from '../types/osm'
 
@@ -15,6 +15,9 @@ const props = defineProps<{
 }>()
 
 const open = ref(true)
+// Les barres partent à 0 puis croissent jusqu'à leur largeur cible (transition CSS).
+const grown = ref(false)
+onMounted(() => requestAnimationFrame(() => (grown.value = true)))
 
 interface Row {
   key: string
@@ -62,18 +65,24 @@ function distLabel(ratio: number): string {
     </button>
 
     <div v-show="open" class="space-y-3 pt-1">
-      <!-- Barre empilée -->
+      <!-- Barre empilée : chaque segment croît de 0 à sa largeur cible -->
       <div class="flex h-2 w-full overflow-hidden rounded-pill bg-cream-200" aria-hidden="true">
         <div
           v-for="r in rows"
           :key="r.key"
-          :style="{ width: `${r.ratio * 100}%`, backgroundColor: r.color }"
+          class="transition-[width] duration-500 ease-out-soft"
+          :style="{ width: grown ? `${r.ratio * 100}%` : '0%', backgroundColor: r.color }"
         />
       </div>
 
-      <!-- Liste -->
+      <!-- Liste (apparition échelonnée) -->
       <ul class="divide-y divide-cream-200">
-        <li v-for="r in rows" :key="r.key" class="flex items-center gap-3 py-2.5">
+        <li
+          v-for="(r, i) in rows"
+          :key="r.key"
+          class="animate-reveal flex items-center gap-3 py-2.5"
+          :style="{ animationDelay: `${i * 45}ms` }"
+        >
           <span
             class="block h-1 w-6 rounded-pill"
             :style="{ backgroundColor: r.color }"

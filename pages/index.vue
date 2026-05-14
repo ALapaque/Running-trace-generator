@@ -485,12 +485,22 @@ watch(activeTab, (t) => {
         <SheetTabs v-model="activeTab" :tabs="tabs" />
       </template>
 
-      <!-- Contenu par onglet -->
-      <div v-if="activeTab === 'details' && selectedRoute" class="space-y-6 pt-1">
-        <RouteStats :route="selectedRoute" />
+      <!-- Contenu par onglet — transition douce out-in entre onglets -->
+      <Transition name="tab" mode="out-in">
+        <div
+          v-if="activeTab === 'details' && selectedRoute"
+          key="details"
+          class="space-y-6 pt-1"
+        >
+          <div class="animate-reveal">
+            <RouteStats :route="selectedRoute" />
+          </div>
 
-        <!-- Pills difficulté / rythme + inversion du sens -->
-        <div class="flex flex-wrap items-center gap-2">
+          <!-- Pills difficulté / rythme + inversion du sens -->
+          <div
+            class="animate-reveal flex flex-wrap items-center gap-2"
+            style="animation-delay: 60ms"
+          >
           <span class="pill-active">
             Modéré
             <span class="text-[10px] uppercase opacity-80">Difficulté</span>
@@ -536,49 +546,61 @@ watch(activeTab, (t) => {
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
             </svg>
-            Ajuster le tracé
-          </button>
+              Ajuster le tracé
+            </button>
+          </div>
+
+          <div class="animate-reveal" style="animation-delay: 120ms">
+            <ElevationChart :points="selectedRoute.points" />
+          </div>
+
+          <!-- Répartition du terrain : affichée uniquement si l'analyse a réussi -->
+          <div
+            v-if="!selectedRoute.terrainFallback"
+            class="animate-reveal"
+            style="animation-delay: 180ms"
+          >
+            <TerrainBreakdown
+              :terrain="selectedRoute.terrain"
+              :distance-m="selectedRoute.distanceM"
+            />
+          </div>
         </div>
 
-        <ElevationChart :points="selectedRoute.points" />
+        <div v-else-if="activeTab === 'settings'" key="settings" class="pt-1">
+          <ControlPanel
+            ref="cpRef"
+            :start="start"
+            :loading="loading"
+            :initial="initialParams"
+            @submit="onSubmit"
+            @pickStart="onPickStart"
+            @update:valid="formValid = $event"
+          />
+        </div>
 
-        <!-- Répartition du terrain : affichée uniquement si l'analyse a réussi -->
-        <TerrainBreakdown
-          v-if="!selectedRoute.terrainFallback"
-          :terrain="selectedRoute.terrain"
-          :distance-m="selectedRoute.distanceM"
-        />
-      </div>
+        <div
+          v-else-if="activeTab === 'alternatives' && hasResults"
+          key="alternatives"
+          class="pt-1"
+        >
+          <RouteAlternatives
+            :routes="pipeline.results.value"
+            :selectedId="selectedId"
+            @select="(id) => { onSelectRoute(id); activeTab = 'details' }"
+          />
+        </div>
 
-      <div v-else-if="activeTab === 'settings'" class="pt-1">
-        <ControlPanel
-          ref="cpRef"
-          :start="start"
-          :loading="loading"
-          :initial="initialParams"
-          @submit="onSubmit"
-          @pickStart="onPickStart"
-          @update:valid="formValid = $event"
-        />
-      </div>
-
-      <div v-else-if="activeTab === 'alternatives' && hasResults" class="pt-1">
-        <RouteAlternatives
-          :routes="pipeline.results.value"
-          :selectedId="selectedId"
-          @select="(id) => { onSelectRoute(id); activeTab = 'details' }"
-        />
-      </div>
-
-      <div v-else-if="activeTab === 'history'" class="pt-1">
-        <RouteHistory
-          :entries="history.list.value"
-          :selectedId="viewedHistoryId"
-          @select="onSelectHistory"
-          @remove="onRemoveHistory"
-          @clear="onClearHistory"
-        />
-      </div>
+        <div v-else-if="activeTab === 'history'" key="history" class="pt-1">
+          <RouteHistory
+            :entries="history.list.value"
+            :selectedId="viewedHistoryId"
+            @select="onSelectHistory"
+            @remove="onRemoveHistory"
+            @clear="onClearHistory"
+          />
+        </div>
+      </Transition>
 
       <!-- Erreurs / warnings -->
       <div

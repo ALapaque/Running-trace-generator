@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
 
 <template>
   <aside
-    class="fixed z-40 flex flex-col overflow-hidden rounded-card bg-cream-100 shadow-float ring-1 ring-cream-200"
+    class="animate-panel-in fixed z-40 flex flex-col overflow-hidden rounded-card bg-cream-100 shadow-float ring-1 ring-cream-200"
     :style="{
       left: `${x}px`,
       top: `${y}px`,

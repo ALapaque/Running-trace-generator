@@ -17,7 +17,12 @@ function fmtKm(m: number): string {
   <section>
     <h3 class="mb-3 text-base font-bold text-ink-900">Alternatives</h3>
     <ul class="space-y-2" role="listbox" aria-label="Alternatives de parcours">
-      <li v-for="(r, idx) in props.routes" :key="r.id">
+      <li
+        v-for="(r, idx) in props.routes"
+        :key="r.id"
+        class="animate-reveal"
+        :style="{ animationDelay: `${idx * 45}ms` }"
+      >
         <button
           type="button"
           role="option"
