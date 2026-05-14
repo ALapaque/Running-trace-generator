@@ -28,9 +28,12 @@ import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
 import TerrainBreakdown from '../components/TerrainBreakdown.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
+import { useRouteGenerator } from '../composables/useRouteGenerator'
 import { historyEntryToRoute, useRouteHistory } from '../composables/useRouteHistory'
 import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/share-url'
-import type { AnalyzedRoute, GenerationParams } from '../types'
+import { reverseRoute } from '../utils/route-ops'
+import { climbConcentration } from '../utils/climbs'
+import type { AnalyzedRoute, GenerationParams, RouteCandidate, TerrainStats } from '../types'
 import type { LatLng } from '../types/ors'
 
 type TabKey = 'details' | 'settings' | 'alternatives' | 'history'
@@ -53,6 +56,44 @@ const initialParams = ref<GenerationParams | null>(null)
 const lastParams = ref<GenerationParams | null>(null)
 /** Parcours d'historique actuellement affiché (prioritaire sur les résultats du pipeline). */
 const viewedHistoryRoute = ref<AnalyzedRoute | null>(null)
+/** Sens inversé du parcours affiché (transformation locale, sans appel réseau). */
+const reversed = ref(false)
+
+// --- Édition manuelle du tracé ---
+const { routeThroughWaypoints } = useRouteGenerator()
+/** Mode édition actif. */
+const editMode = ref(false)
+/** Waypoints déplaçables (0 = départ). Source de vérité de l'édition. */
+const editableWaypoints = ref<LatLng[]>([])
+/** Parcours re-calculé suite à une édition (override d'affichage). */
+const editedRoute = ref<AnalyzedRoute | null>(null)
+/** Re-routage ORS en cours. */
+const editRerouting = ref(false)
+const editError = ref<string | null>(null)
+let editedRouteBeforeEdit: AnalyzedRoute | null = null
+let editAbort: AbortController | null = null
+
+const EMPTY_TERRAIN: TerrainStats = {
+  route: 0,
+  chemin_large: 0,
+  single: 0,
+  mixte: 0,
+  forest: 0,
+  unknown: 1,
+}
+
+/** Construit un AnalyzedRoute affichable depuis un candidat ré-routé (terrain non analysé). */
+function candidateToRoute(c: RouteCandidate): AnalyzedRoute {
+  return {
+    ...c,
+    terrain: EMPTY_TERRAIN,
+    segments: [],
+    score: 0,
+    scoreBreakdown: { distance: 0, elevation: 0, terrain: 0, forest: 0, profile: 0 },
+    climbConcentration: climbConcentration(c.points),
+    terrainFallback: true,
+  }
+}
 
 // Desktop ≥ 1024px → sidebar flottante draggable ; sinon bottom sheet.
 const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -73,12 +114,18 @@ function triggerSubmit(): void {
   cpRef.value?.submit()
 }
 
-const selectedRoute = computed(() => {
-  // Un parcours d'historique consulté prend le pas sur les résultats du pipeline.
+const baseRoute = computed<AnalyzedRoute | null>(() => {
+  // Un parcours édité prend le pas, puis un parcours d'historique consulté,
+  // puis les résultats du pipeline.
+  if (editedRoute.value) return editedRoute.value
   if (viewedHistoryRoute.value) return viewedHistoryRoute.value
   if (!selectedId.value) return pipeline.results.value[0] ?? null
   return pipeline.results.value.find((r) => r.id === selectedId.value) ?? null
 })
+
+const selectedRoute = computed<AnalyzedRoute | null>(() =>
+  baseRoute.value && reversed.value ? reverseRoute(baseRoute.value) : baseRoute.value,
+)
 
 const loading = computed(
   () =>
@@ -146,6 +193,8 @@ async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
   }
   try {
     viewedHistoryRoute.value = null
+    reversed.value = false
+    clearEditState()
     const top = await pipeline.run(input, { signal: abort.signal, resultsCount })
     selectedId.value = top[0]?.id ?? null
     if (top[0]) history.add(top[0])
@@ -157,15 +206,19 @@ async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
 }
 
 function onSelectRoute(id: string): void {
+  clearEditState()
   viewedHistoryRoute.value = null
+  reversed.value = false
   selectedId.value = id
 }
 
 function onReset(): void {
   abort?.abort()
   pipeline.reset()
+  clearEditState()
   selectedId.value = null
   viewedHistoryRoute.value = null
+  reversed.value = false
   activeTab.value = 'settings'
 }
 
@@ -173,9 +226,73 @@ function onReset(): void {
 function onSelectHistory(id: string): void {
   const entry = history.list.value.find((e) => e.id === id)
   if (!entry) return
+  clearEditState()
   viewedHistoryRoute.value = historyEntryToRoute(entry)
+  reversed.value = false
   activeTab.value = 'details'
   snap.value = 'mid'
+}
+
+// --- Édition manuelle du tracé ---
+/** Échantillonne `count` waypoints intermédiaires + le départ depuis un parcours. */
+function sampleWaypoints(route: AnalyzedRoute, count = 6): LatLng[] {
+  const pts = route.points
+  const wps: LatLng[] = [{ lat: pts[0]!.lat, lng: pts[0]!.lng }]
+  for (let i = 1; i <= count; i++) {
+    const idx = Math.min(pts.length - 1, Math.floor((pts.length / (count + 1)) * i))
+    wps.push({ lat: pts[idx]!.lat, lng: pts[idx]!.lng })
+  }
+  return wps
+}
+
+function enterEditMode(): void {
+  const route = selectedRoute.value
+  if (!route) return
+  editedRouteBeforeEdit = editedRoute.value
+  editableWaypoints.value = sampleWaypoints(route)
+  reversed.value = false
+  editError.value = null
+  editMode.value = true
+  snap.value = 'peek' // dégage la carte pour glisser les points
+}
+
+async function onWaypointMoved(index: number, pos: LatLng): Promise<void> {
+  editableWaypoints.value = editableWaypoints.value.map((w, i) => (i === index ? pos : w))
+  editAbort?.abort()
+  editAbort = new AbortController()
+  editRerouting.value = true
+  editError.value = null
+  try {
+    const loop = [...editableWaypoints.value, editableWaypoints.value[0]!]
+    const candidate = await routeThroughWaypoints(loop, editAbort.signal)
+    editedRoute.value = candidateToRoute(candidate)
+  } catch (e) {
+    if ((e as Error)?.name !== 'AbortError') {
+      editError.value = 'Impossible de re-router par ce point (zone non accessible ?).'
+    }
+  } finally {
+    editRerouting.value = false
+  }
+}
+
+function exitEditMode(save: boolean): void {
+  editAbort?.abort()
+  editMode.value = false
+  editRerouting.value = false
+  editError.value = null
+  if (!save) editedRoute.value = editedRouteBeforeEdit
+  editedRouteBeforeEdit = null
+  editableWaypoints.value = []
+}
+
+function clearEditState(): void {
+  editAbort?.abort()
+  editMode.value = false
+  editedRoute.value = null
+  editableWaypoints.value = []
+  editError.value = null
+  editRerouting.value = false
+  editedRouteBeforeEdit = null
 }
 
 const viewedHistoryId = computed(() =>
@@ -221,7 +338,10 @@ watch(activeTab, (t) => {
         :start="start"
         :route="selectedRoute"
         :bottom-inset="sheetBottomInset"
+        :editable="editMode"
+        :editable-waypoints="editableWaypoints"
         @pickStart="onPickStart"
+        @waypointMoved="onWaypointMoved"
       />
     </div>
 
@@ -306,6 +426,56 @@ watch(activeTab, (t) => {
     <!-- Loading overlay (toast en haut) -->
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />
 
+    <!-- Barre d'édition du tracé (mode édition) -->
+    <div
+      v-if="editMode"
+      class="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center p-3"
+      style="padding-top: max(0.75rem, env(safe-area-inset-top));"
+    >
+      <div
+        class="pointer-events-auto flex max-w-[92vw] items-center gap-3 rounded-pill bg-cream-100 px-4 py-2.5 shadow-float ring-1 ring-cream-200"
+      >
+        <svg
+          v-if="editRerouting"
+          class="h-4 w-4 shrink-0 animate-spin text-olive-900"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
+          <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+        </svg>
+        <span class="text-sm font-medium text-ink-900">
+          {{ editRerouting ? 'Re-calcul du tracé…' : 'Glisse les points pour ajuster' }}
+        </span>
+        <button
+          type="button"
+          class="rounded-pill px-3 py-1.5 text-xs font-semibold text-ink-500 transition hover:bg-cream-200"
+          @click="exitEditMode(false)"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          class="rounded-pill bg-olive-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-olive-800"
+          @click="exitEditMode(true)"
+        >
+          Terminé
+        </button>
+      </div>
+    </div>
+
+    <!-- Erreur d'édition (toast court) -->
+    <div
+      v-if="editError"
+      class="pointer-events-none absolute inset-x-0 top-16 z-30 flex justify-center p-3"
+      role="alert"
+    >
+      <div class="pointer-events-auto rounded-pill bg-terracotta-500/15 px-4 py-2 text-xs text-terracotta-600">
+        {{ editError }}
+      </div>
+    </div>
+
     <!-- Panneau : bottom sheet (mobile) ou sidebar flottante (desktop).
          Même API de slots → contenu défini une seule fois. -->
     <component :is="panelComponent" v-bind="panelProps">
@@ -318,8 +488,8 @@ watch(activeTab, (t) => {
       <div v-if="activeTab === 'details' && selectedRoute" class="space-y-6 pt-1">
         <RouteStats :route="selectedRoute" />
 
-        <!-- Pills difficulté / rythme -->
-        <div class="flex flex-wrap gap-2">
+        <!-- Pills difficulté / rythme + inversion du sens -->
+        <div class="flex flex-wrap items-center gap-2">
           <span class="pill-active">
             Modéré
             <span class="text-[10px] uppercase opacity-80">Difficulté</span>
@@ -328,6 +498,45 @@ watch(activeTab, (t) => {
             6 min/km
             <span class="text-[10px] uppercase opacity-60">Rythme</span>
           </span>
+          <button
+            type="button"
+            :class="reversed ? 'pill-active' : 'pill-muted'"
+            :aria-pressed="reversed"
+            @click="reversed = !reversed"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="17 1 21 5 17 9" />
+              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+              <polyline points="7 23 3 19 7 15" />
+              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+            </svg>
+            Sens inversé
+          </button>
+          <button type="button" class="pill-muted" @click="enterEditMode">
+            <svg
+              viewBox="0 0 24 24"
+              class="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+            Ajuster le tracé
+          </button>
         </div>
 
         <ElevationChart :points="selectedRoute.points" />

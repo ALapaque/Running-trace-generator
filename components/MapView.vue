@@ -22,13 +22,18 @@ const props = withDefaults(
     showWaypoints?: boolean
     /** Hauteur (px) occupée par le bottom sheet — réservée en bas du fitBounds. */
     bottomInset?: number
+    /** Mode édition : affiche des waypoints déplaçables au lieu des markers fixes. */
+    editable?: boolean
+    /** Waypoints éditables (ordonnés, 0 = départ) — utilisés en mode édition. */
+    editableWaypoints?: LatLng[]
   }>(),
-  { showWaypoints: true, bottomInset: 0 },
+  { showWaypoints: true, bottomInset: 0, editable: false, editableWaypoints: () => [] },
 )
 
 const emit = defineEmits<{
   (e: 'pickStart', position: LatLng): void
   (e: 'ready'): void
+  (e: 'waypointMoved', index: number, position: LatLng): void
 }>()
 
 const mapEl = ref<HTMLDivElement | null>(null)
@@ -36,6 +41,7 @@ const mapEl = ref<HTMLDivElement | null>(null)
 let map: import('leaflet').Map | null = null
 let marker: import('leaflet').Marker | null = null
 let routeLayer: import('leaflet').LayerGroup | null = null
+let editLayer: import('leaflet').LayerGroup | null = null
 let LRef: typeof import('leaflet') | null = null
 
 async function loadLeaflet(): Promise<typeof import('leaflet')> {
@@ -60,6 +66,20 @@ function makeWaypointIcon(L: typeof import('leaflet'), n: number) {
     html: `<span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:#FCFBF7;color:#2F6B3F;font-size:12px;font-weight:700;border:1.5px solid #2F6B3F;box-shadow:0 1px 4px rgba(42,42,38,0.3);">${n}</span>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
+  })
+}
+
+/** Marker éditable (plus gros, halo « grab »). 0 = départ. */
+function makeEditIcon(L: typeof import('leaflet'), n: number) {
+  const isStart = n === 0
+  const bg = isStart ? '#2F6B3F' : '#FCFBF7'
+  const fg = isStart ? '#FCFBF7' : '#2F6B3F'
+  const label = isStart ? '★' : String(n)
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9999px;background:${bg};color:${fg};font-size:13px;font-weight:700;border:2px solid #2F6B3F;box-shadow:0 0 0 4px rgba(47,107,63,0.18),0 2px 6px rgba(42,42,38,0.35);cursor:grab;">${label}</span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
   })
 }
 
@@ -115,6 +135,7 @@ onMounted(async () => {
   })
 
   routeLayer = L.layerGroup().addTo(map)
+  editLayer = L.layerGroup().addTo(map)
   emit('ready')
 })
 
@@ -149,6 +170,35 @@ watch(
     if (props.route) fitRoute()
   },
 )
+
+// Mode édition : markers déplaçables. Le marker de départ + le clic-carte
+// sont neutralisés tant qu'on édite (le départ devient le waypoint 0).
+watch(
+  [() => props.editable, () => props.editableWaypoints],
+  () => {
+    drawEditWaypoints()
+    if (marker) marker.setOpacity(props.editable ? 0 : 1)
+  },
+  { deep: true },
+)
+
+async function drawEditWaypoints(): Promise<void> {
+  if (!map || !editLayer) return
+  const L = await loadLeaflet()
+  editLayer.clearLayers()
+  if (!props.editable) return
+  props.editableWaypoints.forEach((wp, i) => {
+    const m = L.marker([wp.lat, wp.lng], {
+      draggable: true,
+      icon: makeEditIcon(L, i),
+      zIndexOffset: 1000,
+    }).addTo(editLayer!)
+    m.on('dragend', () => {
+      const pos = m.getLatLng()
+      emit('waypointMoved', i, { lat: pos.lat, lng: pos.lng })
+    })
+  })
+}
 
 async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
   if (!map || !routeLayer) return
@@ -187,8 +237,8 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
     }
   }
 
-  // Marqueurs numérotés sur 10 paliers réguliers
-  if (props.showWaypoints !== false && route.points.length > 10) {
+  // Marqueurs numérotés sur 10 paliers réguliers (masqués en mode édition).
+  if (props.showWaypoints !== false && !props.editable && route.points.length > 10) {
     const total = route.points.length
     for (let i = 1; i <= 10; i++) {
       const idx = Math.min(total - 1, Math.floor((total / 10) * i))

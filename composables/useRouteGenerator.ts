@@ -73,17 +73,23 @@ function targetLengthForIndex(input: RouteGenerationInput, index: number, total:
   return km * 1000 * ORS_OVER_REQUEST_RATIO
 }
 
-async function fetchOrsCandidate(
-  config: { baseUrl: string; apiKey: string },
-  input: RouteGenerationInput,
-  seed: number,
-  lengthM: number,
-  signal?: AbortSignal,
-): Promise<RouteCandidate> {
-  const profile = mapProfile(input.terrain)
-  const body = buildOrsBody(input, seed, lengthM)
-  const url = `${config.baseUrl}/v2/directions/${profile}/geojson`
+interface OrsGeoJson {
+  features: Array<{
+    geometry: { coordinates: [number, number, number][] }
+    properties: {
+      summary?: { distance: number; duration: number; ascent?: number; descent?: number }
+    }
+  }>
+}
 
+/** POST commun vers ORS directions, avec gestion 429 / erreurs. */
+async function postOrs(
+  config: { baseUrl: string; apiKey: string },
+  profile: 'foot-hiking' | 'foot-walking',
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<OrsGeoJson> {
+  const url = `${config.baseUrl}/v2/directions/${profile}/geojson`
   const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
@@ -95,22 +101,16 @@ async function fetchOrsCandidate(
     timeoutMs: ORS_FETCH_TIMEOUT_MS,
     externalSignal: signal,
   })
-
   if (res.status === 429) throw new OrsQuotaExceededError()
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new OrsApiError(res.status, `ORS ${res.status}: ${text.slice(0, 200)}`)
   }
+  return (await res.json()) as OrsGeoJson
+}
 
-  const data = (await res.json()) as {
-    features: Array<{
-      geometry: { coordinates: [number, number, number][] }
-      properties: {
-        summary?: { distance: number; duration: number; ascent?: number; descent?: number }
-      }
-    }>
-  }
-
+/** Transforme une réponse GeoJSON ORS en RouteCandidate. */
+function parseOrsResponse(data: OrsGeoJson, id: string, seed: number): RouteCandidate {
   const feature = data.features?.[0]
   if (!feature) throw new OrsApiError(200, 'ORS : aucune feature renvoyée')
 
@@ -127,15 +127,27 @@ async function fetchOrsCandidate(
   }
 
   const { gain, loss } = computeElevationGainLoss(points)
-
   return {
-    id: `cand-${seed}`,
+    id,
     seed,
     points,
     distanceM: feature.properties.summary?.distance ?? distance,
     elevationGainM: feature.properties.summary?.ascent ?? gain,
     elevationLossM: feature.properties.summary?.descent ?? loss,
   }
+}
+
+async function fetchOrsCandidate(
+  config: { baseUrl: string; apiKey: string },
+  input: RouteGenerationInput,
+  seed: number,
+  lengthM: number,
+  signal?: AbortSignal,
+): Promise<RouteCandidate> {
+  const profile = mapProfile(input.terrain)
+  const body = buildOrsBody(input, seed, lengthM)
+  const data = await postOrs(config, profile, body, signal)
+  return parseOrsResponse(data, `cand-${seed}`, seed)
 }
 
 /**
@@ -218,7 +230,34 @@ export function useRouteGenerator() {
     return { candidates, quotaExceeded }
   }
 
-  return { generateCandidates }
+  /**
+   * Re-calcule un itinéraire passant par une liste ordonnée de waypoints
+   * (édition manuelle du tracé). Pour une boucle, fermer en répétant le départ.
+   */
+  async function routeThroughWaypoints(
+    waypoints: LatLng[],
+    signal?: AbortSignal,
+  ): Promise<RouteCandidate> {
+    const apiKey = config.public.orsApiKey
+    if (!apiKey) {
+      throw new Error("Clé OpenRouteService manquante : définir NUXT_PUBLIC_ORS_API_KEY dans .env")
+    }
+    if (waypoints.length < 2) throw new Error('Au moins 2 points sont nécessaires')
+    const orsConfig = { baseUrl: config.public.orsBaseUrl, apiKey }
+    const data = await postOrs(
+      orsConfig,
+      'foot-hiking',
+      {
+        coordinates: waypoints.map((w) => [w.lng, w.lat]),
+        elevation: true,
+        instructions: false,
+      },
+      signal,
+    )
+    return parseOrsResponse(data, `edited-${Date.now()}`, 0)
+  }
+
+  return { generateCandidates, routeThroughWaypoints }
 }
 
 export type { LatLng }
