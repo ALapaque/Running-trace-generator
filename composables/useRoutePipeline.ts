@@ -28,7 +28,7 @@ export interface PipelineRunOptions {
 }
 
 /** Multiplie les bornes d'une plage (ex. km → m). `null` reste `null`. */
-function scaleRange(range: NumberRange | null, factor: number): NumberRange | null {
+export function scaleRange(range: NumberRange | null, factor: number): NumberRange | null {
   return range ? { min: range.min * factor, max: range.max * factor } : null
 }
 
@@ -36,7 +36,7 @@ function scaleRange(range: NumberRange | null, factor: number): NumberRange | nu
  * True si `value` tombe dans `range` élargie d'une tolérance, OU si `range`
  * est `null` (critère non contraignant).
  */
-function inRange(
+export function inRange(
   value: number,
   range: NumberRange | null,
   toleranceRatio: number,
