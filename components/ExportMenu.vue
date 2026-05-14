@@ -119,9 +119,11 @@ function onDownload(): void {
       enter-from-class="opacity-0 -translate-y-1"
       leave-to-class="opacity-0 -translate-y-1"
     >
+      <!-- Aligné à droite sur mobile (menu en haut-droite), à gauche sur
+           desktop (le menu passe en haut-gauche, la sidebar prend la droite). -->
       <div
         v-if="open"
-        class="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-card border border-cream-200 bg-cream-100 shadow-float"
+        class="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-card border border-cream-200 bg-cream-100 shadow-float lg:left-0 lg:right-auto"
         role="menu"
       >
         <button

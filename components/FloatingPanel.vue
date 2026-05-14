@@ -17,7 +17,12 @@ const MARGIN = 16
 /** Hauteur min restant visible quand on pousse le panneau vers le bas. */
 const MIN_VISIBLE = 88
 
-const x = ref(MARGIN)
+// Position par défaut : coin haut-droit (init synchrone, app SPA).
+const x = ref(
+  typeof window !== 'undefined'
+    ? Math.max(MARGIN, window.innerWidth - PANEL_W - MARGIN)
+    : MARGIN,
+)
 const y = ref(MARGIN)
 const collapsed = ref(false)
 const dragging = ref(false)
