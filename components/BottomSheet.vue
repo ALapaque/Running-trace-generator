@@ -229,6 +229,13 @@ function onScrimClick(): void {
       <slot />
     </div>
 
+    <!-- Fondu en bas du scroll : le contenu coupé s'estompe au lieu d'être
+         tranché net. `-mt-6` le superpose sans occuper de hauteur. -->
+    <div
+      class="pointer-events-none -mt-6 h-6 shrink-0 bg-gradient-to-t from-cream-50 to-transparent"
+      aria-hidden="true"
+    />
+
     <!-- Footer optionnel (toujours visible, sous la zone scroll) -->
     <div
       v-if="$slots.footer"

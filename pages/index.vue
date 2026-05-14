@@ -185,6 +185,12 @@ const fabClusterStyle = computed(() => {
   return { bottom: `calc(${base} + 12px + env(safe-area-inset-bottom))` }
 })
 
+/**
+ * Overlays carte (cluster FAB + légende) masqués quand le sheet `full` couvre
+ * la carte : ils remonteraient se coller au header et l'encombrer.
+ */
+const showMapOverlays = computed(() => isDesktop.value || snap.value !== 'full')
+
 const tabs = computed<Tab[]>(() => [
   { key: 'settings', label: t('tabs.settings') },
   {
@@ -428,6 +434,7 @@ watch(selectedRoute, () => {
     <!-- FABs droite : zoom + recenter (au-dessus du sheet sur mobile,
          coin bas-droit fixe sur desktop) -->
     <div
+      v-show="showMapOverlays"
       class="pointer-events-none absolute right-3 z-hud flex flex-col gap-2"
       :style="fabClusterStyle"
     >
@@ -447,7 +454,7 @@ watch(selectedRoute, () => {
     <!-- Légende du tracé (bas-gauche) — clé des couleurs de la polyline.
          Suit la même hauteur que le cluster de FABs (au-dessus du sheet). -->
     <div
-      v-if="selectedRoute && !selectedRoute.terrainFallback && !editMode"
+      v-if="showMapOverlays && selectedRoute && !selectedRoute.terrainFallback && !editMode"
       class="pointer-events-none absolute left-3 z-hud flex"
       :style="fabClusterStyle"
     >

@@ -79,9 +79,9 @@ export default <Config>{
         pill: '999px',
       },
       boxShadow: {
-        sheet: '0 -8px 32px -12px rgba(42, 42, 38, 0.20)',
-        float: '0 4px 14px -4px rgba(42, 42, 38, 0.20), 0 1px 3px rgba(42, 42, 38, 0.08)',
-        card: '0 1px 4px rgba(42, 42, 38, 0.06)',
+        sheet: '0 -12px 40px -12px rgba(42, 42, 38, 0.28)',
+        float: '0 6px 20px -6px rgba(42, 42, 38, 0.22), 0 2px 6px -2px rgba(42, 42, 38, 0.10)',
+        card: '0 2px 10px -3px rgba(42, 42, 38, 0.10)',
       },
       spacing: {
         '4.5': '18px',
