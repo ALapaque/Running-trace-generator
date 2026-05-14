@@ -9,6 +9,7 @@
 import { haversineM } from '../utils/geo'
 import { fetchWithTimeout } from '../utils/fetch-timeout'
 import {
+  DEFAULT_DISTANCE_SPAN_KM,
   ELEVATION_NOISE_M,
   ORS_CANDIDATES,
   ORS_FETCH_TIMEOUT_MS,
@@ -63,12 +64,12 @@ function buildOrsBody(input: RouteGenerationInput, seed: number, lengthM: number
  * Longueur (m) demandée à ORS pour le candidat `index` parmi `total`.
  * On répartit les cibles sur toute la plage [min, max] pour produire des
  * candidats de longueurs variées ; le scoring/filtre tri ensuite.
+ * Si la distance n'est pas contrainte, on explore un span par défaut.
  */
 function targetLengthForIndex(input: RouteGenerationInput, index: number, total: number): number {
-  const minKm = input.distanceKm.min
-  const maxKm = input.distanceKm.max
+  const span = input.distanceKm ?? DEFAULT_DISTANCE_SPAN_KM
   const t = total <= 1 ? 0.5 : index / (total - 1)
-  const km = minKm + (maxKm - minKm) * t
+  const km = span.min + (span.max - span.min) * t
   return km * 1000 * ORS_OVER_REQUEST_RATIO
 }
 

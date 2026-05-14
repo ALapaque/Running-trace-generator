@@ -40,6 +40,8 @@ let abort: AbortController | null = null
 const pipeline = useRoutePipeline()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
+/** Validité du formulaire (départ défini + au moins distance ou dénivelé actif). */
+const formValid = ref(false)
 
 // Desktop ≥ 1024px → sidebar flottante draggable ; sinon bottom sheet.
 const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -283,6 +285,7 @@ watch(activeTab, (t) => {
           :loading="loading"
           @submit="onSubmit"
           @pickStart="onPickStart"
+          @update:valid="formValid = $event"
         />
       </div>
 
@@ -320,7 +323,7 @@ watch(activeTab, (t) => {
         <button
           type="button"
           class="btn-primary w-full"
-          :disabled="!start || loading"
+          :disabled="!formValid || loading"
           @click="triggerSubmit"
         >
           <span v-if="loading" class="inline-flex items-center gap-2">

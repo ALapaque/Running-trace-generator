@@ -6,7 +6,7 @@
  * - Pills pour terrain et type de côte
  * - Toggle forêt
  */
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import {
   DEFAULT_DISTANCE_RANGE_KM,
   DEFAULT_ELEVATION_RANGE_M,
@@ -35,16 +35,26 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'submit', payload: ControlPanelSubmit): void
   (e: 'pickStart', position: LatLng): void
+  (e: 'update:valid', valid: boolean): void
 }>()
 
 const form = reactive({
+  // Distance et dénivelé sont optionnels mais au moins un doit être actif.
+  useDistance: true,
   distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
+  useElevation: false,
   elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
   terrain: 'mixte' as RouteGenerationInput['terrain'],
   preferForest: false,
   hills: 'vallonné' as RouteGenerationInput['hills'],
   resultsCount: DEFAULT_RESULTS_COUNT as ResultsCount,
 })
+
+/** Au moins un critère actif + point de départ défini. */
+const valid = computed(
+  () => !!props.start && (form.useDistance || form.useElevation),
+)
+watch(valid, (v) => emit('update:valid', v), { immediate: true })
 
 const geo = useGeolocation()
 
@@ -95,11 +105,11 @@ function selectGeocode(r: GeocodeResult): void {
 }
 
 function onSubmit(): void {
-  if (!props.start) return
+  if (!valid.value) return
   emit('submit', {
-    start: props.start,
-    distanceKm: { ...form.distanceKm },
-    elevationGainM: { ...form.elevationGainM },
+    start: props.start as LatLng,
+    distanceKm: form.useDistance ? { ...form.distanceKm } : null,
+    elevationGainM: form.useElevation ? { ...form.elevationGainM } : null,
     terrain: form.terrain,
     preferForest: form.preferForest,
     hills: form.hills,
@@ -107,9 +117,8 @@ function onSubmit(): void {
   })
 }
 
-// Exposé au parent (page) pour qu'il puisse trigger le submit depuis le footer
-// du BottomSheet, sans avoir besoin de remonter l'état du formulaire.
-defineExpose({ submit: onSubmit, canSubmit: () => !!props.start })
+// Exposé au parent (page) pour qu'il puisse trigger le submit depuis le footer.
+defineExpose({ submit: onSubmit })
 
 const terrainOptions: RouteGenerationInput['terrain'][] = [
   'route',
@@ -217,18 +226,27 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </p>
     </section>
 
-    <!-- Distance (plage) -->
+    <!-- Distance (plage, optionnelle) -->
     <section>
-      <div class="flex items-baseline justify-between">
-        <span class="text-label uppercase text-ink-500">Distance</span>
-        <p class="flex items-baseline gap-1">
+      <div class="flex items-center justify-between">
+        <label class="flex cursor-pointer items-center gap-2">
+          <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
+            <input v-model="form.useDistance" type="checkbox" class="peer sr-only" />
+            <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
+            <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
+          </span>
+          <span class="text-label uppercase text-ink-500">Distance</span>
+        </label>
+        <p v-if="form.useDistance" class="flex items-baseline gap-1">
           <span class="text-stat-sm tabular-nums">{{ form.distanceKm.min.toFixed(1) }}</span>
           <span class="text-unit text-ink-500">–</span>
           <span class="text-stat-sm tabular-nums">{{ form.distanceKm.max.toFixed(1) }}</span>
           <span class="text-unit text-ink-500">km</span>
         </p>
+        <span v-else class="text-xs text-ink-400">Non contrainte</span>
       </div>
       <RangeSlider
+        v-show="form.useDistance"
         v-model="form.distanceKm"
         class="mt-2"
         :min="DISTANCE_BOUNDS_KM.min"
@@ -237,18 +255,27 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       />
     </section>
 
-    <!-- Dénivelé positif (plage) -->
+    <!-- Dénivelé positif (plage, optionnelle) -->
     <section>
-      <div class="flex items-baseline justify-between">
-        <span class="text-label uppercase text-ink-500">Dénivelé positif</span>
-        <p class="flex items-baseline gap-1">
+      <div class="flex items-center justify-between">
+        <label class="flex cursor-pointer items-center gap-2">
+          <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
+            <input v-model="form.useElevation" type="checkbox" class="peer sr-only" />
+            <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
+            <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
+          </span>
+          <span class="text-label uppercase text-ink-500">Dénivelé positif</span>
+        </label>
+        <p v-if="form.useElevation" class="flex items-baseline gap-1">
           <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.min }}</span>
           <span class="text-unit text-ink-500">–</span>
           <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.max }}</span>
           <span class="text-unit text-ink-500">m</span>
         </p>
+        <span v-else class="text-xs text-ink-400">Non contraint</span>
       </div>
       <RangeSlider
+        v-show="form.useElevation"
         v-model="form.elevationGainM"
         class="mt-2"
         :min="ELEVATION_BOUNDS_M.min"
@@ -256,6 +283,10 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         :step="ELEVATION_BOUNDS_M.step"
       />
     </section>
+
+    <p v-if="!form.useDistance && !form.useElevation" class="text-xs text-terracotta-600">
+      Active au moins la distance ou le dénivelé pour générer un parcours.
+    </p>
 
     <!-- Type de chemin -->
     <section>

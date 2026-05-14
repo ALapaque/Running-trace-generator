@@ -16,10 +16,10 @@ export interface NumberRange {
 
 export interface RouteGenerationInput {
   start: LatLng
-  /** Plage de distance acceptée, en km. */
-  distanceKm: NumberRange
-  /** Plage de dénivelé positif acceptée, en mètres. */
-  elevationGainM: NumberRange
+  /** Plage de distance acceptée, en km. `null` = non contrainte. */
+  distanceKm: NumberRange | null
+  /** Plage de dénivelé positif acceptée, en mètres. `null` = non contrainte. */
+  elevationGainM: NumberRange | null
   terrain: TerrainPreference
   preferForest: boolean
   hills: HillPreference

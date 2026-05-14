@@ -11,8 +11,11 @@ import {
   DEFAULT_RESULTS_COUNT,
   DISTANCE_TOLERANCE_ABS_MIN_M,
   DISTANCE_TOLERANCE_RATIO,
+  ELEVATION_TOLERANCE_ABS_MIN_M,
+  ELEVATION_TOLERANCE_RATIO,
   candidatesForResultsCount,
 } from '../config'
+import type { NumberRange } from '../types/ors'
 import type { AnalyzedRoute } from '../types'
 import type { RouteGenerationInput } from '../types/ors'
 
@@ -22,6 +25,26 @@ export interface PipelineRunOptions {
   signal?: AbortSignal
   /** Nombre d'alternatives à retourner après scoring (3, 5 ou 10). */
   resultsCount?: number
+}
+
+/** Multiplie les bornes d'une plage (ex. km → m). `null` reste `null`. */
+function scaleRange(range: NumberRange | null, factor: number): NumberRange | null {
+  return range ? { min: range.min * factor, max: range.max * factor } : null
+}
+
+/**
+ * True si `value` tombe dans `range` élargie d'une tolérance, OU si `range`
+ * est `null` (critère non contraignant).
+ */
+function inRange(
+  value: number,
+  range: NumberRange | null,
+  toleranceRatio: number,
+  toleranceAbsMin: number,
+): boolean {
+  if (!range) return true
+  const tol = Math.max(toleranceAbsMin, ((range.min + range.max) / 2) * toleranceRatio)
+  return value >= range.min - tol && value <= range.max + tol
 }
 
 export function useRoutePipeline() {
@@ -74,19 +97,24 @@ export function useRoutePipeline() {
 
       stage.value = 'scoring'
 
-      // Filtrage par plage de distance avant scoring : on garde les candidats
-      // dont la distance tombe dans [min, max] élargie d'une petite tolérance
-      // (ORS sur-livre parfois). Si trop peu passent, on relâche la contrainte.
-      const minM = input.distanceKm.min * 1000
-      const maxM = input.distanceKm.max * 1000
-      const toleranceM = Math.max(
-        DISTANCE_TOLERANCE_ABS_MIN_M,
-        ((minM + maxM) / 2) * DISTANCE_TOLERANCE_RATIO,
-      )
+      // Filtrage par les plages actives (distance et/ou dénivelé) avant scoring.
+      // Une plage `null` n'est pas contraignante. La plage est élargie d'une
+      // petite tolérance (ORS sur-livre parfois, SRTM est bruité). Si trop peu
+      // de candidats passent, on relâche la contrainte.
       const within = analyses.filter(
         (a) =>
-          a.candidate.distanceM >= minM - toleranceM &&
-          a.candidate.distanceM <= maxM + toleranceM,
+          inRange(
+            a.candidate.distanceM,
+            scaleRange(input.distanceKm, 1000),
+            DISTANCE_TOLERANCE_RATIO,
+            DISTANCE_TOLERANCE_ABS_MIN_M,
+          ) &&
+          inRange(
+            a.candidate.elevationGainM,
+            input.elevationGainM,
+            ELEVATION_TOLERANCE_RATIO,
+            ELEVATION_TOLERANCE_ABS_MIN_M,
+          ),
       )
       const usable = within.length >= Math.min(resultsCount, 3) ? within : analyses
       distanceToleranceRelaxed.value = usable !== within

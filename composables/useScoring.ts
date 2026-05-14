@@ -86,16 +86,22 @@ export function rangeError(value: number, min: number, max: number): number {
 
 export function useScoring() {
   function scoreOne(input: AnalyzedInput, request: RouteGenerationInput): AnalyzedRoute {
-    const distanceErr = rangeError(
-      input.candidate.distanceM,
-      request.distanceKm.min * 1000,
-      request.distanceKm.max * 1000,
-    )
-    const elevationErr = rangeError(
-      input.candidate.elevationGainM,
-      request.elevationGainM.min,
-      request.elevationGainM.max,
-    )
+    // Distance / dénivelé optionnels : un critère non contraint → erreur 0
+    // (il ne pèse pas sur le score, seuls les critères demandés comptent).
+    const distanceErr = request.distanceKm
+      ? rangeError(
+          input.candidate.distanceM,
+          request.distanceKm.min * 1000,
+          request.distanceKm.max * 1000,
+        )
+      : 0
+    const elevationErr = request.elevationGainM
+      ? rangeError(
+          input.candidate.elevationGainM,
+          request.elevationGainM.min,
+          request.elevationGainM.max,
+        )
+      : 0
     const terrainErr = 1 - terrainShare(input.terrain, request.terrain)
     const forestErr = request.preferForest ? 1 - input.terrain.forest : 0
     const concentration = computeClimbConcentration(input.candidate)

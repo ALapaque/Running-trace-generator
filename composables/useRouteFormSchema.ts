@@ -16,17 +16,24 @@ function rangeSchema(bounds: { min: number; max: number }) {
   )
 }
 
-export const RouteFormSchema = v.object({
-  start: v.object({
-    lat: v.pipe(v.number(), v.minValue(-90), v.maxValue(90)),
-    lng: v.pipe(v.number(), v.minValue(-180), v.maxValue(180)),
+export const RouteFormSchema = v.pipe(
+  v.object({
+    start: v.object({
+      lat: v.pipe(v.number(), v.minValue(-90), v.maxValue(90)),
+      lng: v.pipe(v.number(), v.minValue(-180), v.maxValue(180)),
+    }),
+    // Distance et dénivelé optionnels (`null` = non contraint).
+    distanceKm: v.nullable(rangeSchema(DISTANCE_BOUNDS_KM)),
+    elevationGainM: v.nullable(rangeSchema(ELEVATION_BOUNDS_M)),
+    terrain: v.picklist(['route', 'chemin_large', 'single', 'mixte']),
+    preferForest: v.boolean(),
+    hills: v.picklist(['plat', 'vallonné', 'montagneux']),
   }),
-  distanceKm: rangeSchema(DISTANCE_BOUNDS_KM),
-  elevationGainM: rangeSchema(ELEVATION_BOUNDS_M),
-  terrain: v.picklist(['route', 'chemin_large', 'single', 'mixte']),
-  preferForest: v.boolean(),
-  hills: v.picklist(['plat', 'vallonné', 'montagneux']),
-})
+  v.check(
+    (input) => input.distanceKm !== null || input.elevationGainM !== null,
+    'Au moins la distance ou le dénivelé doit être renseigné',
+  ),
+)
 
 export type RouteFormValues = v.InferOutput<typeof RouteFormSchema>
 

@@ -53,12 +53,13 @@ export function candidatesForResultsCount(top: number): number {
 export const ORS_OVER_REQUEST_RATIO = 1.0
 
 /**
- * Tolérance dure sur la distance avant scoring.
- * Un candidat hors de [cible*(1-r), cible*(1+r)] est écarté.
- * Plancher absolu de 500 m pour les très courtes distances.
+ * Tolérance appliquée aux bornes des plages avant scoring.
+ * Un candidat hors de la plage élargie de cette tolérance est écarté.
  */
 export const DISTANCE_TOLERANCE_RATIO = 0.075 // ±7.5 %
 export const DISTANCE_TOLERANCE_ABS_MIN_M = 500
+export const ELEVATION_TOLERANCE_RATIO = 0.15 // ±15 % (SRTM bruité)
+export const ELEVATION_TOLERANCE_ABS_MIN_M = 50
 
 /** Distance min/max acceptée par l'app, en km. */
 export const DISTANCE_BOUNDS_KM = { min: 3, max: 50, step: 0.5 } as const
@@ -69,6 +70,13 @@ export const ELEVATION_BOUNDS_M = { min: 0, max: 2000, step: 50 } as const
 /** Plages par défaut du formulaire (sélection min–max). */
 export const DEFAULT_DISTANCE_RANGE_KM = { min: 8, max: 12 } as const
 export const DEFAULT_ELEVATION_RANGE_M = { min: 100, max: 300 } as const
+
+/**
+ * Span de distance exploré quand l'utilisateur ne contraint PAS la distance
+ * (seul le dénivelé est demandé). ORS round-trip exige une longueur cible :
+ * on répartit les candidats sur ce span pour obtenir des distances variées.
+ */
+export const DEFAULT_DISTANCE_SPAN_KM = { min: 5, max: 25 } as const
 
 /** Vitesse running par défaut pour estimer le temps (min/km). */
 export const PACE_MIN_PER_KM = 6

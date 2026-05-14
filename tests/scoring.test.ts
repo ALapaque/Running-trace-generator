@@ -116,6 +116,27 @@ describe('useScoring.scoreOne', () => {
     expect(noForest.scoreBreakdown.forest).toBe(0)
     expect(withForest.scoreBreakdown.forest).toBeGreaterThan(0)
   })
+
+  it('ignore la distance quand le critère distance est null', () => {
+    // Candidat très loin de toute plage : sans contrainte distance, aucune pénalité.
+    const candidate = makeFlatCandidate(42_000)
+    const terrain: TerrainStats = { ...baseTerrain, single: 1, unknown: 0 }
+    const result = scoreOne(
+      { candidate, terrain, segments: [], fallback: false },
+      { ...request, distanceKm: null },
+    )
+    expect(result.scoreBreakdown.distance).toBe(0)
+  })
+
+  it('ignore le dénivelé quand le critère dénivelé est null', () => {
+    const candidate = { ...makeFlatCandidate(10_000), elevationGainM: 1500 }
+    const terrain: TerrainStats = { ...baseTerrain, single: 1, unknown: 0 }
+    const result = scoreOne(
+      { candidate, terrain, segments: [], fallback: false },
+      { ...request, elevationGainM: null },
+    )
+    expect(result.scoreBreakdown.elevation).toBe(0)
+  })
 })
 
 describe('useScoring.rank', () => {
