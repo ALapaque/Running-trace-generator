@@ -222,13 +222,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           ]"
           @click="form.mode = 'running'"
         >
-          <!-- Route avec marquage central -->
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 22 L9 2" />
-            <path d="M19 22 L15 2" />
-            <line x1="12" y1="5" x2="12" y2="9" />
-            <line x1="12" y1="13" x2="12" y2="17" />
-          </svg>
+          <Icon name="road" class="h-5 w-5" />
           <span class="text-sm font-semibold">{{ t('mode.running') }}</span>
           <span
             class="text-xs"
@@ -250,12 +244,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           ]"
           @click="form.mode = 'trail'"
         >
-          <!-- Sapin -->
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 2 L7 11 H17 Z" />
-            <path d="M12 8 L5 18 H19 Z" />
-            <line x1="12" y1="18" x2="12" y2="22" />
-          </svg>
+          <Icon name="pine" class="h-5 w-5" />
           <span class="text-sm font-semibold">{{ t('mode.trail') }}</span>
           <span
             class="text-xs"
@@ -274,19 +263,10 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </label>
       <div class="mt-1 flex gap-2">
         <div class="relative flex-1">
-          <svg
+          <Icon
+            name="search"
             class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          />
           <input
             id="address-search"
             v-model="geocodeQuery"
@@ -305,33 +285,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           :disabled="geo.loading.value"
           @click="useCurrentPosition"
         >
-          <svg
-            v-if="!geo.loading.value"
-            viewBox="0 0 24 24"
-            class="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2" x2="12" y2="5" />
-            <line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" />
-            <line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
-          <svg
-            v-else
-            class="h-5 w-5 animate-spin text-olive-900"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
-            <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-          </svg>
+          <Icon v-if="!geo.loading.value" name="locate" class="h-5 w-5" />
+          <Icon v-else name="spinner" class="h-5 w-5 animate-spin text-olive-900" />
         </button>
       </div>
       <ul

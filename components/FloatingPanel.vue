@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
 
 <template>
   <aside
-    class="animate-panel-in fixed z-40 flex flex-col overflow-hidden rounded-card bg-cream-100 shadow-float ring-1 ring-cream-300"
+    class="animate-panel-in fixed z-panel flex flex-col overflow-hidden rounded-card bg-cream-100 shadow-float ring-1 ring-cream-300"
     :style="{
       left: `${x}px`,
       top: `${y}px`,
@@ -108,19 +108,7 @@ onBeforeUnmount(() => {
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
     >
-      <svg
-        viewBox="0 0 24 24"
-        class="h-4 w-4 text-ink-500"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <circle cx="9" cy="6" r="1.6" />
-        <circle cx="15" cy="6" r="1.6" />
-        <circle cx="9" cy="12" r="1.6" />
-        <circle cx="15" cy="12" r="1.6" />
-        <circle cx="9" cy="18" r="1.6" />
-        <circle cx="15" cy="18" r="1.6" />
-      </svg>
+      <Icon name="grip" class="h-4 w-4 text-ink-500" />
       <span class="text-sm font-bold text-ink-900">RunGen</span>
       <button
         type="button"
@@ -129,19 +117,11 @@ onBeforeUnmount(() => {
         :aria-expanded="!collapsed"
         @click="collapsed = !collapsed"
       >
-        <svg
-          viewBox="0 0 24 24"
+        <Icon
+          name="chevron-up"
           class="h-4 w-4 transition-transform duration-200 ease-out-soft"
           :class="collapsed ? 'rotate-180' : ''"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="18 15 12 9 6 15" />
-        </svg>
+        />
       </button>
     </div>
 

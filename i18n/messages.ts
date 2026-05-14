@@ -133,7 +133,6 @@ export const fr = {
 
   fab: {
     openSettings: 'Ouvrir les paramètres',
-    runMode: 'Mode course à pied',
     reset: 'Réinitialiser',
     search: 'Rechercher',
     recenter: 'Recentrer la carte',
@@ -297,7 +296,6 @@ export const en: typeof fr = {
 
   fab: {
     openSettings: 'Open settings',
-    runMode: 'Running mode',
     reset: 'Reset',
     search: 'Search',
     recenter: 'Recenter map',

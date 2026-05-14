@@ -58,19 +58,7 @@ const difficulty = computed(() =>
         :aria-label="t('details.changePace')"
         @click="emit('cyclePace')"
       >
-        <svg
-          viewBox="0 0 24 24"
-          class="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="7 10 12 5 17 10" />
-          <polyline points="7 14 12 19 17 14" />
-        </svg>
+        <Icon name="chevron-expand" class="h-3.5 w-3.5" />
         {{ formatPace(pace) }} {{ t('units.minPerKm') }}
         <span class="text-[11px] uppercase opacity-60">{{ t('details.pace') }}</span>
       </button>
@@ -80,37 +68,11 @@ const difficulty = computed(() =>
         :aria-pressed="reversed"
         @click="emit('toggleReverse')"
       >
-        <svg
-          viewBox="0 0 24 24"
-          class="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="17 1 21 5 17 9" />
-          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-          <polyline points="7 23 3 19 7 15" />
-          <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-        </svg>
+        <Icon name="reverse" class="h-3.5 w-3.5" />
         {{ t('details.reverse') }}
       </button>
       <button type="button" class="pill-muted" @click="emit('edit')">
-        <svg
-          viewBox="0 0 24 24"
-          class="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-        </svg>
+        <Icon name="edit" class="h-3.5 w-3.5" />
         {{ t('details.edit') }}
       </button>
     </div>

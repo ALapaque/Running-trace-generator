@@ -18,7 +18,7 @@ function fmtKm(m: number): string {
 
 <template>
   <section>
-    <h3 class="mb-3 text-base font-bold text-ink-900">{{ t('alternatives.title') }}</h3>
+    <h2 class="mb-3 text-base font-bold text-ink-900">{{ t('alternatives.title') }}</h2>
     <ul class="space-y-2" role="listbox" :aria-label="t('alternatives.listLabel')">
       <li
         v-for="(r, idx) in props.routes"

@@ -52,19 +52,11 @@ function distLabel(ratio: number): string {
       :aria-expanded="open"
       @click="open = !open"
     >
-      <svg
+      <Icon
+        name="chevron-down"
         :class="['h-4 w-4 text-ink-500 transition-transform duration-200 ease-out-soft', open ? '' : '-rotate-90']"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-      <h3 class="text-base font-bold text-ink-900">{{ t('terrain.title') }}</h3>
+      />
+      <h2 class="text-base font-bold text-ink-900">{{ t('terrain.title') }}</h2>
     </button>
 
     <div v-show="open" class="space-y-3 pt-1">

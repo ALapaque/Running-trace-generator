@@ -21,6 +21,10 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-title', content: 'RunGen' },
       ],
       link: [
+        // Police Inter — preconnect + stylesheet (chargement parallèle, pas
+        // sérialisé derrière le CSS comme le ferait un @import).
+        { rel: 'preconnect', href: 'https://rsms.me', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://rsms.me/inter/inter.css' },
         {
           rel: 'stylesheet',
           href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

@@ -360,10 +360,10 @@ watch(activeTab, (t) => {
 <template>
   <div class="relative h-dvh w-screen overflow-hidden bg-cream-50">
     <h1 class="sr-only">{{ t('app.title') }}</h1>
-    <!-- Carte plein écran — `z-0` + `isolate` isolent le stacking context
+    <!-- Carte plein écran — `z-map` + `isolate` isolent le stacking context
          Leaflet (panes 200/400/600/800) pour empêcher ses z-index internes
          de passer au-dessus du sheet et des FABs. -->
-    <div class="absolute inset-0 z-0 isolate">
+    <div class="absolute inset-0 z-map isolate">
       <MapView
         ref="mapRef"
         :start="start"
@@ -378,7 +378,7 @@ watch(activeTab, (t) => {
 
     <!-- Header flottant (top-left + top-right) -->
     <div
-      class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3"
+      class="pointer-events-none absolute inset-x-0 top-0 z-hud flex items-start justify-between p-3"
       style="padding-top: max(0.75rem, env(safe-area-inset-top));"
     >
       <!-- Top-left : sélecteur de langue (toujours) + raccourcis paramètres /
@@ -389,27 +389,12 @@ watch(activeTab, (t) => {
         </FloatingButton>
 
         <template v-if="!isDesktop">
-         <FloatingButton
-          :label="t(`fab.openSettings`)"
-          @click="(activeTab = 'settings'), (snap = 'full')"
-        >
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </FloatingButton>
-
-         <FloatingButton
-          :label="t(`fab.runMode`)"
-          :active="true"
-        >
-          <!-- Pictogramme coureur -->
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="13" cy="4" r="2" />
-            <path d="M4 22l3-7 4 2 2-3 3 4 4-2" />
-            <path d="M9 13l3-5 4 3-2 4" />
-          </svg>
-        </FloatingButton>
+          <FloatingButton
+            :label="t('fab.openSettings')"
+            @click="(activeTab = 'settings'), (snap = 'full')"
+          >
+            <Icon name="settings" class="h-5 w-5" />
+          </FloatingButton>
         </template>
       </div>
 
@@ -422,10 +407,7 @@ watch(activeTab, (t) => {
           :label="t(`fab.reset`)"
           @click="onReset"
         >
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <Icon name="close" class="h-5 w-5" />
         </FloatingButton>
       </div>
     </div>
@@ -433,29 +415,18 @@ watch(activeTab, (t) => {
     <!-- FABs droite : zoom + recenter (au-dessus du sheet sur mobile,
          coin bas-droit fixe sur desktop) -->
     <div
-      class="pointer-events-none absolute right-3 z-20 flex flex-col gap-2"
+      class="pointer-events-none absolute right-3 z-hud flex flex-col gap-2"
       :style="fabClusterStyle"
     >
       <div class="pointer-events-auto flex flex-col gap-2">
-        <FloatingButton :label="t(`fab.recenter`)" @click="mapRef?.recenter()">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2" x2="12" y2="5" />
-            <line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" />
-            <line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
+        <FloatingButton :label="t('fab.recenter')" @click="mapRef?.recenter()">
+          <Icon name="locate" class="h-5 w-5" />
         </FloatingButton>
-        <FloatingButton :label="t(`fab.zoomIn`)" small @click="mapRef?.zoomIn()">
-          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+        <FloatingButton :label="t('fab.zoomIn')" small @click="mapRef?.zoomIn()">
+          <Icon name="plus" class="h-4 w-4" />
         </FloatingButton>
-        <FloatingButton :label="t(`fab.zoomOut`)" small @click="mapRef?.zoomOut()">
-          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+        <FloatingButton :label="t('fab.zoomOut')" small @click="mapRef?.zoomOut()">
+          <Icon name="minus" class="h-4 w-4" />
         </FloatingButton>
       </div>
     </div>
@@ -464,7 +435,7 @@ watch(activeTab, (t) => {
          Suit la même hauteur que le cluster de FABs (au-dessus du sheet). -->
     <div
       v-if="selectedRoute && !selectedRoute.terrainFallback && !editMode"
-      class="pointer-events-none absolute left-3 z-20 flex"
+      class="pointer-events-none absolute left-3 z-hud flex"
       :style="fabClusterStyle"
     >
       <MapLegend class="pointer-events-auto" :terrain="selectedRoute.terrain" />
@@ -476,22 +447,17 @@ watch(activeTab, (t) => {
     <!-- Barre d'édition du tracé (mode édition) -->
     <div
       v-if="editMode"
-      class="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center p-3"
+      class="pointer-events-none absolute inset-x-0 top-0 z-overlay flex justify-center p-3"
       style="padding-top: max(0.75rem, env(safe-area-inset-top));"
     >
       <div
         class="pointer-events-auto flex max-w-[92vw] items-center gap-3 rounded-pill bg-cream-100 px-4 py-2.5 shadow-float ring-1 ring-cream-300"
       >
-        <svg
+        <Icon
           v-if="editRerouting"
+          name="spinner"
           class="h-4 w-4 shrink-0 animate-spin text-olive-900"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
-          <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        </svg>
+        />
         <span class="text-sm font-medium text-ink-900">
           {{ editRerouting ? t('edit.rerouting') : t('edit.drag') }}
         </span>
@@ -515,7 +481,7 @@ watch(activeTab, (t) => {
     <!-- Erreur d'édition (toast court) -->
     <div
       v-if="editError"
-      class="pointer-events-none absolute inset-x-0 top-16 z-30 flex justify-center p-3"
+      class="pointer-events-none absolute inset-x-0 top-16 z-overlay flex justify-center p-3"
       role="alert"
     >
       <div class="pointer-events-auto rounded-pill bg-terracotta-500/15 px-4 py-2 text-xs text-terracotta-600">
@@ -625,18 +591,12 @@ watch(activeTab, (t) => {
           @click="triggerSubmit"
         >
           <span v-if="loading" class="inline-flex items-center gap-2">
-            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
-              <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-            </svg>
+            <Icon name="spinner" class="h-4 w-4 animate-spin" />
             {{ t('control.generating') }}
           </span>
           <span v-else class="inline-flex items-center gap-2">
             {{ t('control.generate') }}
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
+            <Icon name="arrow-right" class="h-4 w-4" />
           </span>
         </button>
       </template>

@@ -7,6 +7,7 @@
 import { computed } from 'vue'
 import { useElevationProfile } from '../composables/useElevationProfile'
 import { useI18n } from '../composables/useI18n'
+import { CHART_COLORS } from '../config'
 import type { RoutePoint } from '../types/ors'
 
 const props = defineProps<{ points: RoutePoint[] }>()
@@ -71,7 +72,7 @@ const path = computed<Computed>(() => {
 <template>
   <div>
     <header class="mb-2 flex items-center justify-between">
-      <h3 class="text-base font-bold text-ink-900">{{ t('elevation.title') }}</h3>
+      <h2 class="text-base font-bold text-ink-900">{{ t('elevation.title') }}</h2>
     </header>
     <svg
       :viewBox="`0 0 ${VIEW_W} ${VIEW_H}`"
@@ -81,13 +82,13 @@ const path = computed<Computed>(() => {
     >
       <defs>
         <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#7FA86B" stop-opacity="0.5" />
-          <stop offset="100%" stop-color="#7FA86B" stop-opacity="0.06" />
+          <stop offset="0%" :stop-color="CHART_COLORS.area" stop-opacity="0.5" />
+          <stop offset="100%" :stop-color="CHART_COLORS.area" stop-opacity="0.06" />
         </linearGradient>
       </defs>
 
       <!-- Lignes de référence horizontales -->
-      <g stroke="#E7E2D5" stroke-dasharray="3 4" stroke-width="0.8" fill="none">
+      <g :stroke="CHART_COLORS.refLine" stroke-dasharray="3 4" stroke-width="0.8" fill="none">
         <line
           v-for="(r, i) in path.refLines"
           :key="`hl-${i}`"
@@ -97,7 +98,7 @@ const path = computed<Computed>(() => {
           :y2="r.y"
         />
       </g>
-      <g fill="#6B6A60" font-size="11">
+      <g :fill="CHART_COLORS.text" font-size="11">
         <text
           v-for="(r, i) in path.refLines"
           :key="`yl-${i}`"
@@ -117,7 +118,7 @@ const path = computed<Computed>(() => {
         :d="path.d"
         pathLength="1"
         fill="none"
-        stroke="#2F6B3F"
+        :stroke="CHART_COLORS.line"
         stroke-width="2"
         stroke-linejoin="round"
       />
@@ -128,10 +129,10 @@ const path = computed<Computed>(() => {
         :y1="VIEW_H - PAD.bottom"
         :x2="VIEW_W - PAD.right"
         :y2="VIEW_H - PAD.bottom"
-        stroke="#D4CDBA"
+        :stroke="CHART_COLORS.axis"
         stroke-width="0.8"
       />
-      <g fill="#6B6A60" font-size="11">
+      <g :fill="CHART_COLORS.text" font-size="11">
         <text
           v-for="(t, i) in path.xTicks"
           :key="`xt-${i}`"

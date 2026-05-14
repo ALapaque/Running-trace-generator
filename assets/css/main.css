@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://rsms.me/inter/inter.css');
+/* La police Inter est chargée via <link> dans nuxt.config (preconnect +
+   stylesheet) — un @import ici sérialiserait la requête derrière le CSS. */
 
 html,
 body,
