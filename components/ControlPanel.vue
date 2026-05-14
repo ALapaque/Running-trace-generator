@@ -264,13 +264,6 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         {{ geo.error.value }}
       </p>
       <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">Recherche en cours…</p>
-      <p v-else-if="start" class="mt-2 text-xs text-ink-500">
-        {{ start.lat.toFixed(5) }}, {{ start.lng.toFixed(5) }}
-        — ou clique sur la carte pour repositionner.
-      </p>
-      <p v-else class="mt-2 text-xs text-terracotta-600">
-        Clique sur la carte, recherche une adresse, ou utilise « ma position ».
-      </p>
     </section>
 
     <!-- Distance (plage, optionnelle) -->
