@@ -5,6 +5,8 @@
  *  - User-Agent identifiable (côté navigateur, le User-Agent est imposé par le UA navigateur)
  */
 
+import { fetchWithTimeout } from '../utils/fetch-timeout'
+import { NOMINATIM_FETCH_TIMEOUT_MS } from '../config'
 import type { LatLng } from '../types/ors'
 
 export interface GeocodeResult {
@@ -23,9 +25,10 @@ export function useGeocoding() {
     url.searchParams.set('format', 'jsonv2')
     url.searchParams.set('limit', String(limit))
     url.searchParams.set('addressdetails', '0')
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       headers: { Accept: 'application/json' },
-      signal,
+      timeoutMs: NOMINATIM_FETCH_TIMEOUT_MS,
+      externalSignal: signal,
     })
     if (!res.ok) throw new Error(`Nominatim ${res.status}`)
     const data = (await res.json()) as Array<{

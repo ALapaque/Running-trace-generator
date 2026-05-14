@@ -1,33 +1,68 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PACE_MIN_PER_KM } from '../config'
+import { useCountUp } from '../composables/useCountUp'
+import { useI18n } from '../composables/useI18n'
 import type { AnalyzedRoute } from '../types'
 
-const props = defineProps<{ route: AnalyzedRoute }>()
+const { t } = useI18n()
 
-const distanceKm = computed(() => props.route.distanceM / 1000)
-const durationMin = computed(() => distanceKm.value * PACE_MIN_PER_KM)
+const props = defineProps<{
+  route: AnalyzedRoute
+  /** Allure de course en min/km, pour le temps estimé. */
+  pace: number
+}>()
+
+// Valeurs animées (count-up) — réagissent au changement de parcours.
+const distanceKm = useCountUp(() => props.route.distanceM / 1000)
+const gainM = useCountUp(() => props.route.elevationGainM)
+const lossM = useCountUp(() => props.route.elevationLossM)
+const durationMin = useCountUp(() => (props.route.distanceM / 1000) * props.pace)
+
 const hh = computed(() => Math.floor(durationMin.value / 60))
 const mm = computed(() => Math.round(durationMin.value % 60))
+const timeLabel = computed(() =>
+  hh.value > 0 ? `${hh.value}h${mm.value.toString().padStart(2, '0')}` : `${mm.value}m`,
+)
 </script>
 
 <template>
-  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-    <div class="rounded-md border border-slate-200 bg-white p-3">
-      <p class="text-[10px] uppercase tracking-wide text-slate-500">Distance</p>
-      <p class="text-lg font-semibold text-slate-900">{{ distanceKm.toFixed(2) }} km</p>
+  <!-- 2 colonnes : le détail vit dans un panneau étroit (sheet mobile ou
+       sidebar 380px desktop), 4 colonnes ferait déborder les gros chiffres. -->
+  <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+    <div class="flex flex-col items-start">
+      <p class="flex items-baseline gap-1">
+        <span class="text-stat tabular-nums">{{ distanceKm.toFixed(2) }}</span>
+        <span class="text-unit text-ink-500">km</span>
+      </p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.distance') }}</p>
     </div>
-    <div class="rounded-md border border-slate-200 bg-white p-3">
-      <p class="text-[10px] uppercase tracking-wide text-slate-500">D+</p>
-      <p class="text-lg font-semibold text-slate-900">{{ Math.round(route.elevationGainM) }} m</p>
+
+    <div class="flex flex-col items-start">
+      <p class="flex items-baseline gap-1">
+        <span class="text-stat tabular-nums">{{ hh > 0 ? hh : mm }}</span>
+        <span class="text-unit text-ink-500">{{ hh > 0 ? 'h' : 'm' }}</span>
+        <span v-if="hh > 0" class="text-stat-sm tabular-nums">{{ mm.toString().padStart(2, '0') }}</span>
+        <span v-if="hh > 0" class="text-unit text-ink-500">m</span>
+      </p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.time') }}</p>
     </div>
-    <div class="rounded-md border border-slate-200 bg-white p-3">
-      <p class="text-[10px] uppercase tracking-wide text-slate-500">D-</p>
-      <p class="text-lg font-semibold text-slate-900">{{ Math.round(route.elevationLossM) }} m</p>
+
+    <div class="flex flex-col items-start">
+      <p class="flex items-baseline gap-1">
+        <span class="text-stat tabular-nums">{{ Math.round(gainM) }}</span>
+        <span class="text-unit text-ink-500">m</span>
+      </p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.gain') }}</p>
     </div>
-    <div class="rounded-md border border-slate-200 bg-white p-3">
-      <p class="text-[10px] uppercase tracking-wide text-slate-500">Temps estimé</p>
-      <p class="text-lg font-semibold text-slate-900">{{ hh }}h{{ mm.toString().padStart(2, '0') }}</p>
+
+    <div class="flex flex-col items-start">
+      <p class="flex items-baseline gap-1">
+        <span class="text-stat tabular-nums">{{ Math.round(lossM) }}</span>
+        <span class="text-unit text-ink-500">m</span>
+      </p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.loss') }}</p>
     </div>
+
+    <span class="sr-only">{{ timeLabel }}</span>
   </div>
 </template>

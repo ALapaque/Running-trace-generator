@@ -1,40 +1,126 @@
 <script setup lang="ts">
 /**
- * Panneau de contrôle : tous les inputs utilisateur.
+ * Formulaire de génération — pensé pour vivre dans la bottom sheet / sidebar.
+ * - Recherche d'adresse + géolocalisation
+ * - Plages distance / D+ via sliders à deux poignées
+ * - Pills pour terrain et type de côte
+ * - Toggle forêt
  */
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import {
+  DEFAULT_DISTANCE_RANGE_KM,
+  DEFAULT_ELEVATION_RANGE_M,
+  DEFAULT_RESULTS_COUNT,
   DISTANCE_BOUNDS_KM,
   ELEVATION_BOUNDS_M,
-  HILL_LABELS,
-  TERRAIN_LABELS,
+  RESULTS_COUNT_OPTIONS,
+  type ResultsCount,
 } from '../config'
 import { useGeocoding, type GeocodeResult } from '../composables/useGeocoding'
+import { useGeolocation } from '../composables/useGeolocation'
+import { useI18n } from '../composables/useI18n'
+import { readJson, writeJson } from '../utils/storage'
+import RangeSlider from './RangeSlider.vue'
+import type { GenerationParams } from '../types'
 import type { LatLng, RouteGenerationInput } from '../types/ors'
+
+const { t } = useI18n()
+
+export interface ControlPanelSubmit extends RouteGenerationInput {
+  resultsCount: ResultsCount
+}
+
+interface FormState {
+  useDistance: boolean
+  distanceKm: { min: number; max: number }
+  useElevation: boolean
+  elevationGainM: { min: number; max: number }
+  terrain: RouteGenerationInput['terrain']
+  preferForest: boolean
+  hills: RouteGenerationInput['hills']
+  resultsCount: ResultsCount
+}
+
+const FORM_STORAGE_KEY = 'rungen:form:v1'
+
+function defaultForm(): FormState {
+  return {
+    useDistance: true,
+    distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
+    useElevation: false,
+    elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
+    terrain: 'mixte',
+    preferForest: false,
+    hills: 'vallonné',
+    resultsCount: DEFAULT_RESULTS_COUNT,
+  }
+}
+
+/** Traduit des GenerationParams (URL/historique) en état de formulaire. */
+function formFromParams(p: GenerationParams): FormState {
+  const base = defaultForm()
+  return {
+    useDistance: p.distanceKm !== null,
+    distanceKm: p.distanceKm ?? base.distanceKm,
+    useElevation: p.elevationGainM !== null,
+    elevationGainM: p.elevationGainM ?? base.elevationGainM,
+    terrain: p.terrain,
+    preferForest: p.preferForest,
+    hills: p.hills,
+    resultsCount: (p.resultsCount as ResultsCount) ?? base.resultsCount,
+  }
+}
 
 const props = defineProps<{
   start: LatLng | null
   loading: boolean
+  /** Paramètres initiaux (lien partagé) — priment sur le localStorage. */
+  initial?: GenerationParams | null
 }>()
 
 const emit = defineEmits<{
-  (e: 'submit', payload: RouteGenerationInput): void
+  (e: 'submit', payload: ControlPanelSubmit): void
   (e: 'pickStart', position: LatLng): void
+  (e: 'update:valid', valid: boolean): void
 }>()
 
-const form = reactive({
-  distanceKm: 10,
-  elevationGainM: 150,
-  terrain: 'mixte' as RouteGenerationInput['terrain'],
-  preferForest: false,
-  hills: 'vallonné' as RouteGenerationInput['hills'],
-})
+// Priorité d'initialisation : URL partagée > localStorage > défauts.
+const initialForm: FormState = props.initial
+  ? formFromParams(props.initial)
+  : { ...defaultForm(), ...(readJson<Partial<FormState>>(FORM_STORAGE_KEY) ?? {}) }
+
+const form = reactive<FormState>(initialForm)
+
+// Persiste le formulaire à chaque changement (restauré au prochain chargement).
+watch(
+  form,
+  () => writeJson(FORM_STORAGE_KEY, { ...form }),
+  { deep: true },
+)
+
+/** Au moins un critère actif + point de départ défini. */
+const valid = computed(
+  () => !!props.start && (form.useDistance || form.useElevation),
+)
+watch(valid, (v) => emit('update:valid', v), { immediate: true })
+
+const geo = useGeolocation()
+
+async function useCurrentPosition(): Promise<void> {
+  try {
+    const pos = await geo.request()
+    emit('pickStart', pos)
+    geocodeQuery.value = t('control.myLocation')
+    geocodeResults.value = []
+  } catch {
+    // L'erreur est exposée via geo.error et affichée dans le template.
+  }
+}
 
 const geocodeQuery = ref('')
 const geocodeResults = ref<GeocodeResult[]>([])
 const geocoding = ref(false)
 let geocodeAbort: AbortController | null = null
-
 const { search } = useGeocoding()
 
 async function runGeocode(): Promise<void> {
@@ -67,141 +153,306 @@ function selectGeocode(r: GeocodeResult): void {
 }
 
 function onSubmit(): void {
-  if (!props.start) return
+  if (!valid.value) return
   emit('submit', {
-    start: props.start,
-    distanceKm: form.distanceKm,
-    elevationGainM: form.elevationGainM,
+    start: props.start as LatLng,
+    distanceKm: form.useDistance ? { ...form.distanceKm } : null,
+    elevationGainM: form.useElevation ? { ...form.elevationGainM } : null,
     terrain: form.terrain,
     preferForest: form.preferForest,
     hills: form.hills,
+    resultsCount: form.resultsCount,
   })
 }
 
-const terrainOptions: RouteGenerationInput['terrain'][] = ['route', 'chemin_large', 'single', 'mixte']
+// Exposé au parent (page) pour qu'il puisse trigger le submit depuis le footer.
+defineExpose({ submit: onSubmit })
+
+const terrainOptions: RouteGenerationInput['terrain'][] = [
+  'route',
+  'chemin_large',
+  'single',
+  'mixte',
+]
 const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'montagneux']
 </script>
 
 <template>
-  <form
-    class="flex flex-col gap-5 p-5 overflow-y-auto bg-white border-l border-slate-200 h-full"
-    @submit.prevent="onSubmit"
-  >
-    <header>
-      <h1 class="text-lg font-bold text-slate-900">RunGen</h1>
-      <p class="text-xs text-slate-500">Génère une boucle de running personnalisée.</p>
-    </header>
-
+  <form class="flex flex-col gap-6" @submit.prevent="onSubmit">
+    <!-- Recherche adresse + ma position -->
     <section>
-      <label class="field-label" for="address-search">Point de départ</label>
-      <input
-        id="address-search"
-        v-model="geocodeQuery"
-        type="text"
-        placeholder="Recherche une adresse ou clique sur la carte"
-        class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        autocomplete="off"
-      />
+      <label for="address-search" class="text-label uppercase text-ink-500">
+        {{ t('control.start') }}
+      </label>
+      <div class="mt-1 flex gap-2">
+        <div class="relative flex-1">
+          <svg
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            id="address-search"
+            v-model="geocodeQuery"
+            type="text"
+            :placeholder="t('control.searchPlaceholder')"
+            class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          type="button"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
+          style="min-width: 44px; min-height: 44px;"
+          :aria-label="geo.loading.value ? t('control.locating') : t('control.useLocation')"
+          :aria-busy="geo.loading.value || undefined"
+          :disabled="geo.loading.value"
+          @click="useCurrentPosition"
+        >
+          <svg
+            v-if="!geo.loading.value"
+            viewBox="0 0 24 24"
+            class="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <line x1="12" y1="2" x2="12" y2="5" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="22" y2="12" />
+          </svg>
+          <svg
+            v-else
+            class="h-5 w-5 animate-spin text-olive-900"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
+            <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
       <ul
         v-if="geocodeResults.length"
-        class="mt-1 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white text-sm shadow"
+        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-200 bg-cream-100 text-sm shadow-card"
+        role="listbox"
       >
         <li
           v-for="r in geocodeResults"
           :key="r.label"
-          class="cursor-pointer px-3 py-2 hover:bg-slate-100"
+          class="cursor-pointer px-4 py-3 text-ink-900 hover:bg-cream-200"
+          role="option"
           @click="selectGeocode(r)"
         >
           {{ r.label }}
         </li>
       </ul>
-      <p v-if="geocoding" class="mt-1 text-xs text-slate-400">Recherche en cours…</p>
-      <p v-if="start" class="mt-2 text-xs text-slate-500">
-        Coordonnées : {{ start.lat.toFixed(5) }}, {{ start.lng.toFixed(5) }}
+      <p v-if="geo.error.value" class="mt-2 text-xs text-terracotta-600" role="alert">
+        {{ geo.error.value }}
       </p>
-      <p v-else class="mt-2 text-xs text-amber-600">Clique sur la carte pour définir le départ.</p>
+      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">{{ t('control.searching') }}</p>
     </section>
 
+    <!-- Distance (plage, optionnelle) -->
     <section>
-      <label class="field-label" for="distance">
-        Distance cible : <span class="text-slate-900 font-semibold">{{ form.distanceKm.toFixed(1) }} km</span>
-      </label>
-      <input
-        id="distance"
-        v-model.number="form.distanceKm"
-        type="range"
+      <div class="flex items-center justify-between">
+        <label class="flex cursor-pointer items-center gap-2">
+          <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
+            <input v-model="form.useDistance" type="checkbox" class="peer sr-only" />
+            <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
+            <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
+          </span>
+          <span class="text-label uppercase text-ink-500">{{ t('control.distance') }}</span>
+        </label>
+        <p v-if="form.useDistance" class="flex items-baseline gap-1">
+          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.min.toFixed(1) }}</span>
+          <span class="text-unit text-ink-500">–</span>
+          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.max.toFixed(1) }}</span>
+          <span class="text-unit text-ink-500">km</span>
+        </p>
+        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedF') }}</span>
+      </div>
+      <RangeSlider
+        v-show="form.useDistance"
+        v-model="form.distanceKm"
+        class="mt-2"
         :min="DISTANCE_BOUNDS_KM.min"
         :max="DISTANCE_BOUNDS_KM.max"
         :step="DISTANCE_BOUNDS_KM.step"
-        class="w-full"
+        :aria-label="t('control.distance')"
+        unit="km"
       />
     </section>
 
+    <!-- Dénivelé positif (plage, optionnelle) -->
     <section>
-      <label class="field-label" for="elevation">
-        Dénivelé positif cible : <span class="text-slate-900 font-semibold">{{ form.elevationGainM }} m</span>
-      </label>
-      <input
-        id="elevation"
-        v-model.number="form.elevationGainM"
-        type="range"
+      <div class="flex items-center justify-between">
+        <label class="flex cursor-pointer items-center gap-2">
+          <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
+            <input v-model="form.useElevation" type="checkbox" class="peer sr-only" />
+            <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
+            <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
+          </span>
+          <span class="text-label uppercase text-ink-500">{{ t('control.elevation') }}</span>
+        </label>
+        <p v-if="form.useElevation" class="flex items-baseline gap-1">
+          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.min }}</span>
+          <span class="text-unit text-ink-500">–</span>
+          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.max }}</span>
+          <span class="text-unit text-ink-500">m</span>
+        </p>
+        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedM') }}</span>
+      </div>
+      <RangeSlider
+        v-show="form.useElevation"
+        v-model="form.elevationGainM"
+        class="mt-2"
         :min="ELEVATION_BOUNDS_M.min"
         :max="ELEVATION_BOUNDS_M.max"
         :step="ELEVATION_BOUNDS_M.step"
-        class="w-full"
+        :aria-label="t('control.elevation')"
+        unit="m"
       />
     </section>
 
+    <p v-if="!form.useDistance && !form.useElevation" class="text-xs text-terracotta-600">
+      {{ t('control.atLeastOne') }}
+    </p>
+
+    <!-- Type de chemin -->
     <section>
-      <span class="field-label">Type de chemin</span>
-      <div class="grid grid-cols-2 gap-2">
+      <span class="text-label uppercase text-ink-500">{{ t('control.pathType') }}</span>
+      <div
+        class="mt-2 flex flex-wrap gap-2"
+        role="radiogroup"
+        :aria-label="t('control.pathType')"
+      >
         <button
           v-for="opt in terrainOptions"
           :key="opt"
           type="button"
-          class="rounded-md border px-3 py-2 text-sm transition"
-          :class="
-            form.terrain === opt
-              ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
-              : 'border-slate-300 text-slate-700 hover:border-slate-400'
-          "
+          role="radio"
+          :aria-checked="form.terrain === opt"
+          :class="form.terrain === opt ? 'pill-active' : 'pill-muted'"
           @click="form.terrain = opt"
         >
-          {{ TERRAIN_LABELS[opt] }}
+          {{ t(`terrainPref.${opt}`) }}
         </button>
       </div>
     </section>
 
+    <!-- Forêt -->
     <section>
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input v-model="form.preferForest" type="checkbox" class="h-4 w-4" />
-        <span class="text-sm text-slate-800">Privilégier les portions en forêt</span>
+      <label class="flex cursor-pointer items-center justify-between gap-3 rounded-card bg-cream-100 px-4 py-3">
+        <span class="text-sm font-medium text-ink-900">{{ t('control.preferForest') }}</span>
+        <span class="relative inline-flex h-6 w-11 shrink-0 items-center">
+          <input
+            v-model="form.preferForest"
+            type="checkbox"
+            class="peer sr-only"
+          />
+          <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
+          <span
+            class="absolute left-0.5 top-0.5 h-5 w-5 rounded-pill bg-ink-900 shadow-card transition-transform peer-checked:translate-x-5"
+          />
+        </span>
       </label>
     </section>
 
+    <!-- Côtes -->
     <section>
-      <span class="field-label">Type de côte</span>
-      <div class="grid grid-cols-3 gap-2">
+      <span class="text-label uppercase text-ink-500">{{ t('control.hillType') }}</span>
+      <div
+        class="mt-2 flex flex-wrap gap-2"
+        role="radiogroup"
+        :aria-label="t('control.hillType')"
+      >
         <button
           v-for="opt in hillOptions"
           :key="opt"
           type="button"
-          class="rounded-md border px-2 py-2 text-sm transition"
-          :class="
-            form.hills === opt
-              ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
-              : 'border-slate-300 text-slate-700 hover:border-slate-400'
-          "
+          role="radio"
+          :aria-checked="form.hills === opt"
+          :class="form.hills === opt ? 'pill-active' : 'pill-muted'"
           @click="form.hills = opt"
         >
-          {{ HILL_LABELS[opt] }}
+          {{ t(`hillPref.${opt}`) }}
         </button>
       </div>
     </section>
 
-    <button class="btn-primary mt-2" type="submit" :disabled="!start || loading">
-      <span v-if="loading">Génération en cours…</span>
-      <span v-else>Générer le parcours</span>
+    <!-- Nombre d'alternatives -->
+    <section>
+      <span class="text-label uppercase text-ink-500">{{ t('control.alternativesCount') }}</span>
+      <div
+        class="mt-2 flex flex-wrap gap-2"
+        role="radiogroup"
+        :aria-label="t('control.alternativesCount')"
+      >
+        <button
+          v-for="n in RESULTS_COUNT_OPTIONS"
+          :key="n"
+          type="button"
+          role="radio"
+          :aria-checked="form.resultsCount === n"
+          :class="form.resultsCount === n ? 'pill-active' : 'pill-muted'"
+          @click="form.resultsCount = n"
+        >
+          {{ n }}
+        </button>
+      </div>
+      <p v-if="form.resultsCount >= 10" class="mt-2 text-xs text-ink-500">
+        {{ t('control.quotaWarning') }}
+      </p>
+    </section>
+
+    <!-- CTA Générer : rendu par la page dans le footer du BottomSheet
+         (via défineExpose `submit` + slot `#footer`). -->
+    <button type="submit" class="hidden" aria-hidden="true" tabindex="-1">
+      Submit (caché, déclenché par Enter dans un input)
     </button>
   </form>
 </template>
+
+<style scoped>
+input[type='range'] {
+  height: 6px;
+  border-radius: 999px;
+  background: theme('colors.cream.200');
+  appearance: none;
+  outline: none;
+}
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: theme('colors.olive.900');
+  border: 3px solid theme('colors.cream.50');
+  box-shadow: 0 1px 4px rgba(42, 42, 38, 0.3);
+  cursor: pointer;
+}
+input[type='range']::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: theme('colors.olive.900');
+  border: 3px solid theme('colors.cream.50');
+  box-shadow: 0 1px 4px rgba(42, 42, 38, 0.3);
+  cursor: pointer;
+}
+</style>

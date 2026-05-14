@@ -11,6 +11,7 @@
  */
 
 import { HILL_PROFILES, SCORING_WEIGHTS } from '../config'
+import { climbConcentration } from '../utils/climbs'
 import type { AnalyzedRoute } from '../types'
 import type { TerrainStats } from '../types/osm'
 import type { HillPreference, RouteCandidate, RouteGenerationInput, TerrainPreference } from '../types/ors'
@@ -22,31 +23,12 @@ interface AnalyzedInput {
   fallback: boolean
 }
 
-/** Concentration du D+ ∈ [0, 1] : coefficient de variation des montées par tronçon. */
+/**
+ * Concentration du D+ ∈ [0, 1], basée sur la détection des montées réelles
+ * (part du D+ contenue dans la plus grosse montée). Voir `utils/climbs.ts`.
+ */
 export function computeClimbConcentration(candidate: RouteCandidate): number {
-  const pts = candidate.points
-  if (pts.length < 10) return 0.5
-  // On découpe en 10 tronçons de longueur égale et on calcule le D+ de chacun.
-  const buckets = 10
-  const bucketSize = Math.floor(pts.length / buckets)
-  const gains: number[] = []
-  for (let b = 0; b < buckets; b++) {
-    const start = b * bucketSize
-    const end = b === buckets - 1 ? pts.length : start + bucketSize
-    let g = 0
-    for (let i = start + 1; i < end; i++) {
-      const delta = pts[i]!.ele - pts[i - 1]!.ele
-      if (delta > 0) g += delta
-    }
-    gains.push(g)
-  }
-  const mean = gains.reduce((a, b) => a + b, 0) / gains.length
-  if (mean === 0) return 0
-  const variance =
-    gains.reduce((s, g) => s + (g - mean) ** 2, 0) / gains.length
-  const stdDev = Math.sqrt(variance)
-  const cv = stdDev / mean // coefficient de variation
-  return Math.max(0, Math.min(1, cv / 2)) // borne à [0, 1]
+  return climbConcentration(candidate.points)
 }
 
 function terrainShare(stats: TerrainStats, pref: TerrainPreference): number {
@@ -73,15 +55,35 @@ function profilePenalty(
   return Math.max(0, Math.min(1, profile.penalty(candidate.elevationGainM, distanceKm, concentration)))
 }
 
+/**
+ * Erreur d'une valeur vis-à-vis d'une plage [min, max] :
+ *  - 0 si la valeur est dans la plage
+ *  - sinon, écart au bord le plus proche, normalisé par le milieu de plage.
+ */
+export function rangeError(value: number, min: number, max: number): number {
+  if (value >= min && value <= max) return 0
+  const ref = Math.max((min + max) / 2, 1)
+  return value < min ? (min - value) / ref : (value - max) / ref
+}
+
 export function useScoring() {
   function scoreOne(input: AnalyzedInput, request: RouteGenerationInput): AnalyzedRoute {
-    const targetDistanceM = request.distanceKm * 1000
-    const targetGainM = request.elevationGainM
-
-    const distanceErr =
-      Math.abs(input.candidate.distanceM - targetDistanceM) / Math.max(targetDistanceM, 1)
-    const elevationErr =
-      Math.abs(input.candidate.elevationGainM - targetGainM) / Math.max(targetGainM, 1)
+    // Distance / dénivelé optionnels : un critère non contraint → erreur 0
+    // (il ne pèse pas sur le score, seuls les critères demandés comptent).
+    const distanceErr = request.distanceKm
+      ? rangeError(
+          input.candidate.distanceM,
+          request.distanceKm.min * 1000,
+          request.distanceKm.max * 1000,
+        )
+      : 0
+    const elevationErr = request.elevationGainM
+      ? rangeError(
+          input.candidate.elevationGainM,
+          request.elevationGainM.min,
+          request.elevationGainM.max,
+        )
+      : 0
     const terrainErr = 1 - terrainShare(input.terrain, request.terrain)
     const forestErr = request.preferForest ? 1 - input.terrain.forest : 0
     const concentration = computeClimbConcentration(input.candidate)

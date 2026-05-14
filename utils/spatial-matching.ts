@@ -167,3 +167,40 @@ export function classifyPathType(tags: OverpassWay['tags']): PathType | 'unknown
 
   return 'unknown'
 }
+
+/**
+ * Lissage de la séquence de types de chemin (filtre de mode glissant).
+ *
+ * Le matching point-par-point se trompe ponctuellement aux intersections
+ * (un point décimé tombe près d'une route croisée). On remplace donc le type
+ * d'un point par le mode de sa fenêtre [i-r, i+r] quand ce mode est franchement
+ * majoritaire (> moitié de la fenêtre), ce qui efface les classifications
+ * isolées aberrantes.
+ */
+export function smoothPathTypes(
+  types: Array<PathType | 'unknown'>,
+  windowRadius = 2,
+): Array<PathType | 'unknown'> {
+  if (types.length <= 2) return [...types]
+  const out: Array<PathType | 'unknown'> = []
+  for (let i = 0; i < types.length; i++) {
+    const lo = Math.max(0, i - windowRadius)
+    const hi = Math.min(types.length - 1, i + windowRadius)
+    const counts = new Map<PathType | 'unknown', number>()
+    for (let j = lo; j <= hi; j++) {
+      const t = types[j]!
+      counts.set(t, (counts.get(t) ?? 0) + 1)
+    }
+    let mode = types[i]!
+    let modeCount = 0
+    for (const [t, c] of counts) {
+      if (c > modeCount) {
+        modeCount = c
+        mode = t
+      }
+    }
+    const windowSize = hi - lo + 1
+    out.push(modeCount * 2 > windowSize ? mode : types[i]!)
+  }
+  return out
+}

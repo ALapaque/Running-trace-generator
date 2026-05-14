@@ -2,9 +2,14 @@
  * Analyse de terrain : pour chaque candidat ORS,
  *  1. décime à 1 point / 50m
  *  2. construit un bbox englobant avec marge
- *  3. interroge Overpass (avec cache localStorage + limiteur 3 req parallèles)
+ *  3. interroge Overpass (timeout dur + cache localStorage + limiteur 3 req parallèles)
  *  4. matche chaque point au way OSM le plus proche (R-tree, distance < 15m)
  *  5. classifie en `route | chemin_large | single | unknown` et marque les points en forêt
+ *
+ * Robustesse :
+ *  - `fetchWithTimeout` empêche un Overpass qui stalle de figer le pipeline.
+ *  - Circuit breaker : après N échecs consécutifs, on arrête d'appeler Overpass
+ *    pour les candidats restants (fast-fallback) pendant un cooldown.
  */
 
 import { computeBBox, decimateByDistance } from '../utils/geo'
@@ -14,17 +19,22 @@ import {
   classifyPathType,
   findNearestWaySegment,
   isPointInForest,
+  smoothPathTypes,
 } from '../utils/spatial-matching'
 import { getCachedOverpass, setCachedOverpass } from '../utils/bbox-cache'
 import { createLimiter } from '../utils/concurrency'
+import { fetchWithTimeout } from '../utils/fetch-timeout'
 import {
   BBOX_MARGIN_DEG,
-  OVERPASS_DECIMATION_M,
-  OVERPASS_MAX_CONCURRENT,
   MATCH_MAX_DISTANCE_M,
+  OVERPASS_CIRCUIT_COOLDOWN_MS,
+  OVERPASS_CIRCUIT_THRESHOLD,
+  OVERPASS_DECIMATION_M,
+  OVERPASS_FETCH_TIMEOUT_MS,
+  OVERPASS_MAX_CONCURRENT,
 } from '../config'
 import type { BBox, OverpassResponse, SegmentClassification, TerrainStats } from '../types/osm'
-import type { RouteCandidate } from '../types/ors'
+import type { RouteCandidate, RoutePoint } from '../types/ors'
 
 export class OverpassError extends Error {
   constructor(message: string) {
@@ -36,22 +46,40 @@ export class OverpassError extends Error {
 export interface TerrainAnalysisResult {
   segments: SegmentClassification[]
   stats: TerrainStats
-  /** True si Overpass a échoué et qu'on n'a pas pu analyser : seul l'utilisateur du fallback. */
+  /** True si Overpass a échoué et qu'on n'a pas pu analyser le terrain. */
   fallback: boolean
 }
 
 const overpassLimiter = createLimiter(OVERPASS_MAX_CONCURRENT)
+
+// Circuit breaker — partagé entre tous les appels du module.
+let consecutiveFailures = 0
+let circuitOpenUntil = 0
+
+function recordSuccess(): void {
+  consecutiveFailures = 0
+}
+function recordFailure(): void {
+  consecutiveFailures++
+  if (consecutiveFailures >= OVERPASS_CIRCUIT_THRESHOLD) {
+    circuitOpenUntil = Date.now() + OVERPASS_CIRCUIT_COOLDOWN_MS
+  }
+}
+function circuitIsOpen(): boolean {
+  return Date.now() < circuitOpenUntil
+}
 
 async function fetchOverpass(
   url: string,
   query: string,
   signal?: AbortSignal,
 ): Promise<OverpassResponse> {
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `data=${encodeURIComponent(query)}`,
-    signal,
+    timeoutMs: OVERPASS_FETCH_TIMEOUT_MS,
+    externalSignal: signal,
   })
   if (res.status === 429 || res.status === 504) {
     throw new OverpassError(`Overpass throttled (${res.status})`)
@@ -75,8 +103,8 @@ async function fetchOverpassWithFallback(
   try {
     return await fetchOverpass(primary, query, signal)
   } catch (e) {
-    if (e instanceof OverpassError) {
-      // Bascule sur le miroir kumi
+    // Bascule sur le miroir kumi en cas d'échec réseau/timeout/throttle.
+    if (e instanceof OverpassError || (e as Error)?.name === 'TimeoutError') {
       return await fetchOverpass(fallback, query, signal)
     }
     throw e
@@ -101,19 +129,26 @@ function computeStats(segments: SegmentClassification[]): TerrainStats {
     route: route / total,
     chemin_large: chemin_large / total,
     single: single / total,
-    mixte: 0, // 'mixte' n'est pas un type détecté ; uniquement une préférence utilisateur.
+    mixte: 0,
     forest: forest / total,
     unknown: unknown / total,
   }
 }
 
+/** Segments « inconnus » utilisés en mode fallback. */
+function fallbackSegments(decimated: RoutePoint[]): SegmentClassification[] {
+  return decimated.map((p, i) => ({
+    index: i,
+    point: { lat: p.lat, lng: p.lng },
+    pathType: 'unknown' as const,
+    inForest: false,
+  }))
+}
+
 export function useTerrainAnalyzer() {
   const config = useRuntimeConfig()
 
-  async function fetchTerrain(
-    bbox: BBox,
-    signal?: AbortSignal,
-  ): Promise<OverpassResponse> {
+  async function fetchTerrain(bbox: BBox, signal?: AbortSignal): Promise<OverpassResponse> {
     const cached = getCachedOverpass(bbox)
     if (cached) return cached
     const query = buildOverpassQuery(bbox)
@@ -137,43 +172,59 @@ export function useTerrainAnalyzer() {
       BBOX_MARGIN_DEG,
     )
 
+    // Cache local → on tente toujours (gratuit, instantané) même si le circuit est ouvert.
+    const cached = getCachedOverpass(bbox)
+    if (cached) {
+      const index = buildIndex(cached.elements)
+      const segments = classifySegments(decimated, index)
+      return { segments, stats: computeStats(segments), fallback: false }
+    }
+
+    // Circuit ouvert → fast-fallback sans toucher au réseau.
+    if (circuitIsOpen()) {
+      const segments = fallbackSegments(decimated)
+      return { segments, stats: computeStats(segments), fallback: true }
+    }
+
     try {
       const overpass = await overpassLimiter(() => fetchTerrain(bbox, signal))
+      recordSuccess()
       const index = buildIndex(overpass.elements)
-
-      const segments: SegmentClassification[] = decimated.map((p, i) => {
-        const point = { lat: p.lat, lng: p.lng }
-        const nearest = findNearestWaySegment(index, point, MATCH_MAX_DISTANCE_M)
-        const inForest = isPointInForest(index, point)
-        if (!nearest) {
-          return { index: i, point, pathType: 'unknown', inForest }
-        }
-        return {
-          index: i,
-          point,
-          pathType: classifyPathType(nearest.tags),
-          inForest,
-          matchedWayId: nearest.wayId,
-          tags: nearest.tags as Record<string, string>,
-        }
-      })
-
+      const segments = classifySegments(decimated, index)
       return { segments, stats: computeStats(segments), fallback: false }
-    } catch (e) {
-      // Overpass timeout / ban temporaire → fallback : segments inconnus.
-      const segments: SegmentClassification[] = decimated.map((p, i) => ({
-        index: i,
-        point: { lat: p.lat, lng: p.lng },
-        pathType: 'unknown',
-        inForest: false,
-      }))
-      return {
-        segments,
-        stats: computeStats(segments),
-        fallback: true,
-      }
+    } catch {
+      // Timeout / ban / réseau → fallback : terrain non analysé pour ce candidat.
+      recordFailure()
+      const segments = fallbackSegments(decimated)
+      return { segments, stats: computeStats(segments), fallback: true }
     }
   }
 
   return { analyzeCandidate }
+}
+
+function classifySegments(
+  decimated: RoutePoint[],
+  index: ReturnType<typeof buildIndex>,
+): SegmentClassification[] {
+  const raw = decimated.map((p, i) => {
+    const point = { lat: p.lat, lng: p.lng }
+    const nearest = findNearestWaySegment(index, point, MATCH_MAX_DISTANCE_M)
+    const inForest = isPointInForest(index, point)
+    if (!nearest) {
+      return { index: i, point, pathType: 'unknown' as const, inForest }
+    }
+    return {
+      index: i,
+      point,
+      pathType: classifyPathType(nearest.tags),
+      inForest,
+      matchedWayId: nearest.wayId,
+      tags: nearest.tags as Record<string, string>,
+    }
+  })
+
+  // Lissage : efface les classifications isolées aberrantes (intersections).
+  const smoothed = smoothPathTypes(raw.map((s) => s.pathType))
+  return raw.map((s, i) => ({ ...s, pathType: smoothed[i]! }))
 }

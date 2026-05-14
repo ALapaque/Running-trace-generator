@@ -7,7 +7,15 @@
  */
 
 import { haversineM } from '../utils/geo'
-import { ORS_CANDIDATES, ORS_OVER_REQUEST_RATIO, ELEVATION_NOISE_M } from '../config'
+import { fetchWithTimeout } from '../utils/fetch-timeout'
+import { useI18n } from './useI18n'
+import {
+  DEFAULT_DISTANCE_SPAN_KM,
+  ELEVATION_NOISE_M,
+  ORS_CANDIDATES,
+  ORS_FETCH_TIMEOUT_MS,
+  ORS_OVER_REQUEST_RATIO,
+} from '../config'
 import type {
   LatLng,
   RouteCandidate,
@@ -53,43 +61,65 @@ function buildOrsBody(input: RouteGenerationInput, seed: number, lengthM: number
   }
 }
 
-async function fetchOrsCandidate(
+/**
+ * Longueur (m) demandée à ORS pour le candidat `index` parmi `total`.
+ * On répartit les cibles sur toute la plage [min, max] pour produire des
+ * candidats de longueurs variées ; le scoring/filtre tri ensuite.
+ * Si la distance n'est pas contrainte, on explore un span par défaut.
+ */
+function targetLengthForIndex(input: RouteGenerationInput, index: number, total: number): number {
+  const span = input.distanceKm ?? DEFAULT_DISTANCE_SPAN_KM
+  const t = total <= 1 ? 0.5 : index / (total - 1)
+  const km = span.min + (span.max - span.min) * t
+  return km * 1000 * ORS_OVER_REQUEST_RATIO
+}
+
+interface OrsGeoJson {
+  features: Array<{
+    geometry: { coordinates: [number, number, number][] }
+    properties: {
+      summary?: { distance: number; duration: number; ascent?: number; descent?: number }
+    }
+  }>
+}
+
+/** True si on route via le proxy serverless (baseUrl relatif). */
+function isProxied(baseUrl: string): boolean {
+  return baseUrl.startsWith('/')
+}
+
+/** POST commun vers ORS directions, avec gestion 429 / erreurs. */
+async function postOrs(
   config: { baseUrl: string; apiKey: string },
-  input: RouteGenerationInput,
-  seed: number,
+  profile: 'foot-hiking' | 'foot-walking',
+  body: unknown,
   signal?: AbortSignal,
-): Promise<RouteCandidate> {
-  const profile = mapProfile(input.terrain)
-  const lengthM = input.distanceKm * 1000 * ORS_OVER_REQUEST_RATIO
-  const body = buildOrsBody(input, seed, lengthM)
+): Promise<OrsGeoJson> {
   const url = `${config.baseUrl}/v2/directions/${profile}/geojson`
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/geo+json',
+  }
+  // En mode proxy, c'est le serveur qui injecte la clé : pas d'Authorization client.
+  if (!isProxied(config.baseUrl)) headers.Authorization = config.apiKey
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
-    headers: {
-      Authorization: config.apiKey,
-      'Content-Type': 'application/json',
-      Accept: 'application/geo+json',
-    },
+    headers,
     body: JSON.stringify(body),
-    signal,
+    timeoutMs: ORS_FETCH_TIMEOUT_MS,
+    externalSignal: signal,
   })
-
   if (res.status === 429) throw new OrsQuotaExceededError()
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new OrsApiError(res.status, `ORS ${res.status}: ${text.slice(0, 200)}`)
   }
+  return (await res.json()) as OrsGeoJson
+}
 
-  const data = (await res.json()) as {
-    features: Array<{
-      geometry: { coordinates: [number, number, number][] }
-      properties: {
-        summary?: { distance: number; duration: number; ascent?: number; descent?: number }
-      }
-    }>
-  }
-
+/** Transforme une réponse GeoJSON ORS en RouteCandidate. */
+function parseOrsResponse(data: OrsGeoJson, id: string, seed: number): RouteCandidate {
   const feature = data.features?.[0]
   if (!feature) throw new OrsApiError(200, 'ORS : aucune feature renvoyée')
 
@@ -106,15 +136,27 @@ async function fetchOrsCandidate(
   }
 
   const { gain, loss } = computeElevationGainLoss(points)
-
   return {
-    id: `cand-${seed}`,
+    id,
     seed,
     points,
     distanceM: feature.properties.summary?.distance ?? distance,
     elevationGainM: feature.properties.summary?.ascent ?? gain,
     elevationLossM: feature.properties.summary?.descent ?? loss,
   }
+}
+
+async function fetchOrsCandidate(
+  config: { baseUrl: string; apiKey: string },
+  input: RouteGenerationInput,
+  seed: number,
+  lengthM: number,
+  signal?: AbortSignal,
+): Promise<RouteCandidate> {
+  const profile = mapProfile(input.terrain)
+  const body = buildOrsBody(input, seed, lengthM)
+  const data = await postOrs(config, profile, body, signal)
+  return parseOrsResponse(data, `cand-${seed}`, seed)
 }
 
 /**
@@ -142,19 +184,20 @@ export function computeElevationGainLoss(points: RoutePoint[]): {
 
 export function useRouteGenerator() {
   const config = useRuntimeConfig()
+  const { t } = useI18n()
 
   /** Lance N appels ORS en parallèle avec des seeds différents. Retourne uniquement les succès. */
   async function generateCandidates(
     input: RouteGenerationInput,
     options: { count?: number; signal?: AbortSignal } = {},
   ): Promise<{ candidates: RouteCandidate[]; quotaExceeded: boolean }> {
+    const baseUrl = config.public.orsBaseUrl
     const apiKey = config.public.orsApiKey
-    if (!apiKey) {
-      throw new Error(
-        "Clé OpenRouteService manquante : définir NUXT_PUBLIC_ORS_API_KEY dans .env",
-      )
+    // En mode proxy, la clé est côté serveur ; sinon elle est requise côté client.
+    if (!isProxied(baseUrl) && !apiKey) {
+      throw new Error(t("errors.orsKeyMissing"))
     }
-    const orsConfig = { baseUrl: config.public.orsBaseUrl, apiKey }
+    const orsConfig = { baseUrl, apiKey }
     const count = options.count ?? ORS_CANDIDATES
 
     // Seeds pseudo-aléatoires distincts pour explorer différentes formes de boucle.
@@ -165,7 +208,15 @@ export function useRouteGenerator() {
     }
 
     const settled = await Promise.allSettled(
-      seeds.map((seed) => fetchOrsCandidate(orsConfig, input, seed, options.signal)),
+      seeds.map((seed, i) =>
+        fetchOrsCandidate(
+          orsConfig,
+          input,
+          seed,
+          targetLengthForIndex(input, i, seeds.length),
+          options.signal,
+        ),
+      ),
     )
 
     const candidates: RouteCandidate[] = []
@@ -189,7 +240,35 @@ export function useRouteGenerator() {
     return { candidates, quotaExceeded }
   }
 
-  return { generateCandidates }
+  /**
+   * Re-calcule un itinéraire passant par une liste ordonnée de waypoints
+   * (édition manuelle du tracé). Pour une boucle, fermer en répétant le départ.
+   */
+  async function routeThroughWaypoints(
+    waypoints: LatLng[],
+    signal?: AbortSignal,
+  ): Promise<RouteCandidate> {
+    const baseUrl = config.public.orsBaseUrl
+    const apiKey = config.public.orsApiKey
+    if (!isProxied(baseUrl) && !apiKey) {
+      throw new Error(t("errors.orsKeyMissing"))
+    }
+    if (waypoints.length < 2) throw new Error('Au moins 2 points sont nécessaires')
+    const orsConfig = { baseUrl, apiKey }
+    const data = await postOrs(
+      orsConfig,
+      'foot-hiking',
+      {
+        coordinates: waypoints.map((w) => [w.lng, w.lat]),
+        elevation: true,
+        instructions: false,
+      },
+      signal,
+    )
+    return parseOrsResponse(data, `edited-${Date.now()}`, 0)
+  }
+
+  return { generateCandidates, routeThroughWaypoints }
 }
 
 export type { LatLng }

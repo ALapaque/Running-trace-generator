@@ -4,7 +4,7 @@
  */
 
 import type { PathType } from './types/osm'
-import type { TerrainPreference, HillPreference } from './types/ors'
+import type { HillPreference } from './types/ors'
 
 export interface ScoringWeights {
   /** Écart relatif distance cible vs distance réelle. */
@@ -27,17 +27,56 @@ export const SCORING_WEIGHTS: ScoringWeights = {
   w_profile: 0.1,
 }
 
-/** Génération ORS — nombre de candidats à générer en parallèle. */
+/** Génération ORS — nombre de candidats à générer en parallèle (valeur min). */
 export const ORS_CANDIDATES = 8
 
-/** ORS sous-livre souvent ; on demande +10% pour compenser. */
-export const ORS_OVER_REQUEST_RATIO = 1.1
+/** Options proposées à l'utilisateur pour le nombre d'alternatives retournées. */
+export const RESULTS_COUNT_OPTIONS = [3, 5, 10] as const
+export type ResultsCount = (typeof RESULTS_COUNT_OPTIONS)[number]
+export const DEFAULT_RESULTS_COUNT: ResultsCount = 5
+
+/**
+ * Combien de candidats ORS générer pour pouvoir extraire `top` alternatives.
+ * On garde une marge de sélection (~+3) pour que le scoring puisse écarter
+ * les pires candidats même quand l'utilisateur demande 10 résultats.
+ */
+export function candidatesForResultsCount(top: number): number {
+  return Math.max(ORS_CANDIDATES, top + 3)
+}
+
+/**
+ * Ratio appliqué à la distance demandée à ORS.
+ * Observation : sur des distances courtes (~7 km), ORS sur-livre plutôt qu'il
+ * ne sous-livre. On reste donc à 1.0 (neutre) et on filtre les candidats par
+ * tolérance dans le pipeline (DISTANCE_TOLERANCE_RATIO).
+ */
+export const ORS_OVER_REQUEST_RATIO = 1.0
+
+/**
+ * Tolérance appliquée aux bornes des plages avant scoring.
+ * Un candidat hors de la plage élargie de cette tolérance est écarté.
+ */
+export const DISTANCE_TOLERANCE_RATIO = 0.075 // ±7.5 %
+export const DISTANCE_TOLERANCE_ABS_MIN_M = 500
+export const ELEVATION_TOLERANCE_RATIO = 0.15 // ±15 % (SRTM bruité)
+export const ELEVATION_TOLERANCE_ABS_MIN_M = 50
 
 /** Distance min/max acceptée par l'app, en km. */
 export const DISTANCE_BOUNDS_KM = { min: 3, max: 50, step: 0.5 } as const
 
 /** D+ min/max acceptée par l'app, en mètres. */
 export const ELEVATION_BOUNDS_M = { min: 0, max: 2000, step: 50 } as const
+
+/** Plages par défaut du formulaire (sélection min–max). */
+export const DEFAULT_DISTANCE_RANGE_KM = { min: 8, max: 12 } as const
+export const DEFAULT_ELEVATION_RANGE_M = { min: 100, max: 300 } as const
+
+/**
+ * Span de distance exploré quand l'utilisateur ne contraint PAS la distance
+ * (seul le dénivelé est demandé). ORS round-trip exige une longueur cible :
+ * on répartit les candidats sur ce span pour obtenir des distances variées.
+ */
+export const DEFAULT_DISTANCE_SPAN_KM = { min: 5, max: 25 } as const
 
 /** Vitesse running par défaut pour estimer le temps (min/km). */
 export const PACE_MIN_PER_KM = 6
@@ -47,6 +86,9 @@ export const OVERPASS_DECIMATION_M = 50
 
 /** Décimation du tracé pour l'export GPX — environ 1 point par X mètres (Komoot limite à 10 000 points). */
 export const GPX_DECIMATION_M = 10
+
+/** Décimation du tracé pour la persistance localStorage des alternatives (compromis taille/qualité). */
+export const RESULTS_PERSIST_DECIMATION_M = 20
 
 /** Marge ajoutée au bbox Overpass autour du tracé, en degrés (~30m). */
 export const BBOX_MARGIN_DEG = 0.0003
@@ -60,20 +102,36 @@ export const ELEVATION_NOISE_M = 2
 /** Concurrence max sur Overpass (fair-use). */
 export const OVERPASS_MAX_CONCURRENT = 3
 
+/** Timeout dur des requêtes réseau (ms). */
+export const ORS_FETCH_TIMEOUT_MS = 20_000
+export const OVERPASS_FETCH_TIMEOUT_MS = 18_000
+export const NOMINATIM_FETCH_TIMEOUT_MS = 10_000
+
+/**
+ * Circuit breaker Overpass : après N échecs consécutifs, on arrête d'appeler
+ * Overpass pour les candidats restants (fast-fallback) et on attend un cooldown
+ * avant de réessayer. Évite d'attendre des minutes quand le service est down.
+ */
+export const OVERPASS_CIRCUIT_THRESHOLD = 2
+export const OVERPASS_CIRCUIT_COOLDOWN_MS = 60_000
+
 /** TTL du cache Overpass dans localStorage, en millisecondes (24h). */
 export const OVERPASS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 /** Précision du bbox utilisé comme clé de cache (degrés). */
 export const BBOX_CACHE_PRECISION = 0.01
 
-/** Couleurs des polylines par type de terrain. */
+/** Couleurs des polylines par type de terrain (palette terre & forêt). */
 export const PATH_COLORS: Record<PathType | 'unknown', string> = {
-  route: '#2563eb',
-  chemin_large: '#a16207',
-  single: '#16a34a',
-  mixte: '#64748b',
-  unknown: '#94a3b8',
+  route: '#3E6E94',
+  chemin_large: '#A9763F',
+  single: '#4F8C5A',
+  mixte: '#7C8579',
+  unknown: '#A8A293',
 }
+
+/** Couleur unique de la polyline quand l'analyse de terrain est indisponible. */
+export const ROUTE_DEFAULT_COLOR = '#2F6B3F'
 
 /** Profil dénivelé selon le type de côte demandé. */
 export interface HillProfile {
@@ -105,17 +163,4 @@ export const HILL_PROFILES: Record<HillPreference, HillProfile> = {
       return Math.max(0, 0.8 - concentration)
     },
   },
-}
-
-export const TERRAIN_LABELS: Record<TerrainPreference, string> = {
-  route: 'Route',
-  chemin_large: 'Chemin large',
-  single: 'Single track',
-  mixte: 'Mixte',
-}
-
-export const HILL_LABELS: Record<HillPreference, string> = {
-  plat: 'Plat',
-  vallonné: 'Vallonné',
-  montagneux: 'Montagneux',
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeClimbConcentration, useScoring } from '../composables/useScoring'
+import { computeClimbConcentration, rangeError, useScoring } from '../composables/useScoring'
 import type { RouteCandidate, RouteGenerationInput, RoutePoint } from '../types/ors'
 import type { TerrainStats } from '../types/osm'
 
@@ -11,23 +11,33 @@ function makeFlatCandidate(distanceM: number, points = 100): RouteCandidate {
   return { id: 'flat', seed: 1, points: pts, distanceM, elevationGainM: 0, elevationLossM: 0 }
 }
 
-function makeHillyCandidate(distanceM: number, gain: number, concentrated = false): RouteCandidate {
+/**
+ * Candidat avec un profil d'altitude au choix :
+ *  - 'single'  : une seule grosse montée (concentration ~1, montagneux)
+ *  - 'rolling' : plusieurs montées séparées de descentes (concentration basse, vallonné)
+ */
+function makeHillyCandidate(
+  distanceM: number,
+  gain: number,
+  shape: 'single' | 'rolling' = 'single',
+): RouteCandidate {
   const pts: RoutePoint[] = []
   const n = 100
   for (let i = 0; i < n; i++) {
     let ele = 100
-    if (concentrated) {
-      // Tout le gain est sur le quart milieu
+    if (shape === 'single') {
+      // Tout le gain dans le quart milieu.
       if (i >= 40 && i < 60) ele = 100 + ((i - 40) / 20) * gain
       else if (i >= 60) ele = 100 + gain
     } else {
-      // Gain réparti
-      ele = 100 + (i / (n - 1)) * gain
+      // 5 cycles montée/descente → ~5 montées distinctes.
+      const cycle = Math.sin((i / n) * Math.PI * 2 * 5)
+      ele = 100 + ((cycle + 1) / 2) * (gain / 2)
     }
     pts.push({ lat: 50 + i * 0.0001, lng: 4, ele, distance: (i * distanceM) / (n - 1) })
   }
   return {
-    id: concentrated ? 'concentrated' : 'spread',
+    id: shape,
     seed: 2,
     points: pts,
     distanceM,
@@ -49,8 +59,8 @@ describe('useScoring.scoreOne', () => {
   const { scoreOne } = useScoring()
   const request: RouteGenerationInput = {
     start: { lat: 50, lng: 4 },
-    distanceKm: 10,
-    elevationGainM: 100,
+    distanceKm: { min: 9, max: 11 },
+    elevationGainM: { min: 80, max: 120 },
     terrain: 'single',
     preferForest: false,
     hills: 'plat',
@@ -116,6 +126,27 @@ describe('useScoring.scoreOne', () => {
     expect(noForest.scoreBreakdown.forest).toBe(0)
     expect(withForest.scoreBreakdown.forest).toBeGreaterThan(0)
   })
+
+  it('ignore la distance quand le critère distance est null', () => {
+    // Candidat très loin de toute plage : sans contrainte distance, aucune pénalité.
+    const candidate = makeFlatCandidate(42_000)
+    const terrain: TerrainStats = { ...baseTerrain, single: 1, unknown: 0 }
+    const result = scoreOne(
+      { candidate, terrain, segments: [], fallback: false },
+      { ...request, distanceKm: null },
+    )
+    expect(result.scoreBreakdown.distance).toBe(0)
+  })
+
+  it('ignore le dénivelé quand le critère dénivelé est null', () => {
+    const candidate = { ...makeFlatCandidate(10_000), elevationGainM: 1500 }
+    const terrain: TerrainStats = { ...baseTerrain, single: 1, unknown: 0 }
+    const result = scoreOne(
+      { candidate, terrain, segments: [], fallback: false },
+      { ...request, elevationGainM: null },
+    )
+    expect(result.scoreBreakdown.elevation).toBe(0)
+  })
 })
 
 describe('useScoring.rank', () => {
@@ -123,8 +154,8 @@ describe('useScoring.rank', () => {
     const { rank } = useScoring()
     const request: RouteGenerationInput = {
       start: { lat: 50, lng: 4 },
-      distanceKm: 10,
-      elevationGainM: 100,
+      distanceKm: { min: 9, max: 11 },
+      elevationGainM: { min: 80, max: 120 },
       terrain: 'single',
       preferForest: false,
       hills: 'plat',
@@ -164,15 +195,38 @@ describe('useScoring.rank', () => {
 })
 
 describe('computeClimbConcentration', () => {
-  it('renvoie une concentration plus haute pour un D+ concentré', () => {
-    const concentrated = computeClimbConcentration(makeHillyCandidate(10_000, 300, true))
-    const spread = computeClimbConcentration(makeHillyCandidate(10_000, 300, false))
-    expect(concentrated).toBeGreaterThan(spread)
+  it('renvoie une concentration plus haute pour une montée unique que pour un profil vallonné', () => {
+    const single = computeClimbConcentration(makeHillyCandidate(10_000, 300, 'single'))
+    const rolling = computeClimbConcentration(makeHillyCandidate(10_000, 300, 'rolling'))
+    expect(single).toBeGreaterThan(rolling)
   })
 
   it('reste borné dans [0, 1]', () => {
-    const v = computeClimbConcentration(makeHillyCandidate(10_000, 300, true))
+    const v = computeClimbConcentration(makeHillyCandidate(10_000, 300, 'single'))
     expect(v).toBeGreaterThanOrEqual(0)
     expect(v).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('rangeError', () => {
+  it('renvoie 0 quand la valeur est dans la plage (bornes incluses)', () => {
+    expect(rangeError(10, 8, 12)).toBe(0)
+    expect(rangeError(8, 8, 12)).toBe(0)
+    expect(rangeError(12, 8, 12)).toBe(0)
+  })
+
+  it('pénalise proportionnellement en dessous de la borne min', () => {
+    // milieu de plage = 10 → (8 - 6) / 10 = 0.2
+    expect(rangeError(6, 8, 12)).toBeCloseTo(0.2, 5)
+  })
+
+  it('pénalise proportionnellement au-dessus de la borne max', () => {
+    // (16 - 12) / 10 = 0.4
+    expect(rangeError(16, 8, 12)).toBeCloseTo(0.4, 5)
+  })
+
+  it('gère une plage dégénérée [0, 0] sans division par zéro', () => {
+    expect(rangeError(0, 0, 0)).toBe(0)
+    expect(Number.isFinite(rangeError(50, 0, 0))).toBe(true)
   })
 })

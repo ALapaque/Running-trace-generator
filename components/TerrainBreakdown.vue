@@ -1,62 +1,106 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+/**
+ * Bar chart empilé + liste des types avec indicateur "tiret coloré" + distance estimée.
+ * Komoot-style : section pliable, valeurs alignées à droite en tabular-nums.
+ */
+import { computed, onMounted, ref } from 'vue'
 import { PATH_COLORS } from '../config'
+import { useI18n } from '../composables/useI18n'
 import type { TerrainStats } from '../types/osm'
 
+// N'est rendu par la page que lorsque l'analyse de terrain a réussi.
 const props = defineProps<{
   terrain: TerrainStats
-  fallback?: boolean
+  /** Distance totale du parcours en mètres, pour estimer chaque part. */
+  distanceM: number
 }>()
 
-interface Bar {
+const { t } = useI18n()
+
+const open = ref(true)
+// Les barres partent à 0 puis croissent jusqu'à leur largeur cible (transition CSS).
+const grown = ref(false)
+onMounted(() => requestAnimationFrame(() => (grown.value = true)))
+
+interface Row {
   key: string
   label: string
   ratio: number
   color: string
 }
 
-const bars = computed<Bar[]>(() => {
-  return [
-    { key: 'route', label: 'Route', ratio: props.terrain.route, color: PATH_COLORS.route },
-    { key: 'chemin_large', label: 'Chemin large', ratio: props.terrain.chemin_large, color: PATH_COLORS.chemin_large },
-    { key: 'single', label: 'Single', ratio: props.terrain.single, color: PATH_COLORS.single },
-    { key: 'unknown', label: 'Inconnu', ratio: props.terrain.unknown, color: PATH_COLORS.unknown },
-  ]
-})
+const rows = computed<Row[]>(() =>
+  [
+    { key: 'route', label: t('terrain.route'), ratio: props.terrain.route, color: PATH_COLORS.route },
+    { key: 'chemin_large', label: t('terrain.chemin_large'), ratio: props.terrain.chemin_large, color: PATH_COLORS.chemin_large },
+    { key: 'single', label: t('terrain.single'), ratio: props.terrain.single, color: PATH_COLORS.single },
+    { key: 'unknown', label: t('terrain.unknown'), ratio: props.terrain.unknown, color: PATH_COLORS.unknown },
+  ].filter((r) => r.ratio > 0.001),
+)
+
+function distLabel(ratio: number): string {
+  const m = props.distanceM * ratio
+  return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`
+}
 </script>
 
 <template>
-  <div class="rounded-md border border-slate-200 bg-white p-3">
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Répartition du terrain</h3>
-      <span v-if="fallback" class="text-[10px] uppercase tracking-wide text-amber-600">
-        Analyse indisponible (fallback)
-      </span>
-    </div>
-    <div v-if="fallback" class="text-xs text-slate-500">
-      Overpass n'a pas répondu pour ce parcours. La classification est neutralisée — les scores
-      ne dépendent que de la distance et du dénivelé.
-    </div>
-    <div v-else class="space-y-2">
-      <!-- Barre empilée -->
-      <div class="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+  <section>
+    <button
+      type="button"
+      class="flex w-full items-center gap-2 py-2 text-left"
+      :aria-expanded="open"
+      @click="open = !open"
+    >
+      <svg
+        :class="['h-4 w-4 text-ink-500 transition-transform duration-200 ease-out-soft', open ? '' : '-rotate-90']"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+      <h3 class="text-base font-bold text-ink-900">{{ t('terrain.title') }}</h3>
+    </button>
+
+    <div v-show="open" class="space-y-3 pt-1">
+      <!-- Barre empilée : chaque segment croît de 0 à sa largeur cible -->
+      <div class="flex h-2 w-full overflow-hidden rounded-pill bg-cream-200" aria-hidden="true">
         <div
-          v-for="b in bars"
-          :key="b.key"
-          :title="`${b.label} : ${(b.ratio * 100).toFixed(0)}%`"
-          :style="{ width: `${b.ratio * 100}%`, backgroundColor: b.color }"
+          v-for="r in rows"
+          :key="r.key"
+          class="transition-[width] duration-500 ease-out-soft"
+          :style="{ width: grown ? `${r.ratio * 100}%` : '0%', backgroundColor: r.color }"
         />
       </div>
-      <ul class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <li v-for="b in bars" :key="b.key" class="flex items-center gap-2">
-          <span class="inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: b.color }" />
-          <span class="text-slate-700">{{ b.label }}</span>
-          <span class="ml-auto font-mono text-slate-500">{{ (b.ratio * 100).toFixed(0) }}%</span>
+
+      <!-- Liste (apparition échelonnée) -->
+      <ul class="divide-y divide-cream-200">
+        <li
+          v-for="(r, i) in rows"
+          :key="r.key"
+          class="animate-reveal flex items-center gap-3 py-2.5"
+          :style="{ animationDelay: `${i * 45}ms` }"
+        >
+          <span
+            class="block h-1 w-6 rounded-pill"
+            :style="{ backgroundColor: r.color }"
+            aria-hidden="true"
+          />
+          <span class="text-sm text-ink-900">{{ r.label }}</span>
+          <span class="ml-auto text-sm tabular-nums text-ink-700">{{ distLabel(r.ratio) }}</span>
         </li>
       </ul>
-      <div class="mt-1 text-xs text-slate-600">
-        <span class="font-semibold text-emerald-700">Forêt : {{ (terrain.forest * 100).toFixed(0) }}%</span>
-      </div>
+
+      <p v-if="terrain.forest > 0" class="text-sm text-ink-700">
+        <span class="inline-block h-2 w-2 align-middle rounded-pill bg-sage-600" />
+        <span class="ml-2 align-middle font-semibold text-olive-900">{{ t('terrain.forest') }}</span>
+        <span class="ml-1 tabular-nums">{{ distLabel(terrain.forest) }}</span>
+      </p>
     </div>
-  </div>
+  </section>
 </template>

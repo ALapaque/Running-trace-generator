@@ -4,8 +4,9 @@ import {
   classifyPathType,
   findNearestWaySegment,
   isPointInForest,
+  smoothPathTypes,
 } from '../utils/spatial-matching'
-import type { OverpassWay } from '../types/osm'
+import type { OverpassWay, PathType } from '../types/osm'
 
 const wayHighway = (id: number, tags: OverpassWay['tags'], coords: [number, number][]): OverpassWay => ({
   type: 'way',
@@ -118,5 +119,55 @@ describe('isPointInForest', () => {
   it("retourne false s'il n'y a aucun polygone", () => {
     const idx = buildIndex([])
     expect(isPointInForest(idx, { lat: 50.85, lng: 4.35 })).toBe(false)
+  })
+})
+
+describe('smoothPathTypes', () => {
+  it('efface une classification isolée aberrante', () => {
+    const input: Array<PathType | 'unknown'> = [
+      'single',
+      'single',
+      'route', // aberrant : entouré de single
+      'single',
+      'single',
+    ]
+    expect(smoothPathTypes(input)).toEqual([
+      'single',
+      'single',
+      'single',
+      'single',
+      'single',
+    ])
+  })
+
+  it('comble un trou "unknown" entouré d\'un type franc', () => {
+    const input: Array<PathType | 'unknown'> = [
+      'chemin_large',
+      'chemin_large',
+      'unknown',
+      'chemin_large',
+      'chemin_large',
+    ]
+    expect(smoothPathTypes(input)[2]).toBe('chemin_large')
+  })
+
+  it('préserve une vraie transition (pas de majorité franche)', () => {
+    const input: Array<PathType | 'unknown'> = [
+      'route',
+      'route',
+      'route',
+      'single',
+      'single',
+      'single',
+    ]
+    // La transition route→single est nette : aucune valeur isolée à corriger.
+    expect(smoothPathTypes(input)).toEqual(input)
+  })
+
+  it('renvoie une copie pour les très courtes séquences', () => {
+    const input: Array<PathType | 'unknown'> = ['route', 'single']
+    const out = smoothPathTypes(input)
+    expect(out).toEqual(input)
+    expect(out).not.toBe(input)
   })
 })

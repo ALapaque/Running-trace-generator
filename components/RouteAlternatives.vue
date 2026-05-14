@@ -1,8 +1,5 @@
 <script setup lang="ts">
-/**
- * Vue d'ensemble des 3 candidats avec leur score, pour permettre à l'utilisateur
- * de basculer entre eux.
- */
+import { useI18n } from '../composables/useI18n'
 import type { AnalyzedRoute } from '../types'
 
 const props = defineProps<{
@@ -12,44 +9,77 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'select', id: string): void }>()
 
+const { t } = useI18n()
+
 function fmtKm(m: number): string {
   return (m / 1000).toFixed(1)
 }
 </script>
 
 <template>
-  <div class="rounded-md border border-slate-200 bg-white p-3">
-    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-      Alternatives ({{ props.routes.length }})
-    </h3>
-    <ul class="space-y-2">
-      <li v-for="(r, idx) in props.routes" :key="r.id">
+  <section>
+    <h3 class="mb-3 text-base font-bold text-ink-900">{{ t('alternatives.title') }}</h3>
+    <ul class="space-y-2" role="listbox" :aria-label="t('alternatives.listLabel')">
+      <li
+        v-for="(r, idx) in props.routes"
+        :key="r.id"
+        class="animate-reveal"
+        :style="{ animationDelay: `${idx * 45}ms` }"
+      >
         <button
           type="button"
-          class="w-full rounded-md border px-3 py-2 text-left transition"
-          :class="
+          role="option"
+          :aria-selected="selectedId === r.id"
+          :aria-expanded="selectedId === r.id"
+          :class="[
+            'flex w-full items-center gap-3 border p-3 text-left transition',
             selectedId === r.id
-              ? 'border-blue-600 bg-blue-50'
-              : 'border-slate-200 hover:border-slate-400'
-          "
+              ? 'rounded-t-card border-olive-900 bg-olive-50'
+              : 'rounded-card border-cream-200 bg-cream-100 hover:border-cream-300',
+          ]"
           @click="emit('select', r.id)"
         >
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold">
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] mr-2">
-                {{ idx + 1 }}
-              </span>
-              {{ fmtKm(r.distanceM) }} km
-            </span>
-            <span class="font-mono text-xs text-slate-500">score {{ r.score.toFixed(3) }}</span>
+          <span
+            :class="[
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-sm font-bold',
+              selectedId === r.id ? 'bg-olive-900 text-white' : 'bg-cream-200 text-ink-700',
+            ]"
+            aria-hidden="true"
+          >
+            {{ idx + 1 }}
+          </span>
+          <div class="flex-1">
+            <p class="flex items-baseline gap-1">
+              <span class="text-lg font-bold tabular-nums">{{ fmtKm(r.distanceM) }}</span>
+              <span class="text-xs text-ink-500">km</span>
+              <span class="mx-2 text-ink-300">•</span>
+              <span class="text-lg font-bold tabular-nums">{{ Math.round(r.elevationGainM) }}</span>
+              <span class="text-xs text-ink-500">{{ t('alternatives.dPlus') }}</span>
+            </p>
+            <p class="mt-0.5 text-xs text-ink-500">
+              {{ t('terrain.route') }} {{ Math.round(r.terrain.route * 100) }}%
+              · {{ t('terrain.chemin_large') }} {{ Math.round(r.terrain.chemin_large * 100) }}%
+              · {{ t('terrain.single') }} {{ Math.round(r.terrain.single * 100) }}%
+            </p>
           </div>
-          <div class="mt-1 grid grid-cols-3 gap-2 text-[11px] text-slate-500">
-            <span>D+ {{ Math.round(r.elevationGainM) }}m</span>
-            <span>Route {{ Math.round(r.terrain.route * 100) }}%</span>
-            <span>Forêt {{ Math.round(r.terrain.forest * 100) }}%</span>
-          </div>
+          <span class="font-mono text-[11px] text-ink-400">{{ t('alternatives.score') }} {{ r.score.toFixed(2) }}</span>
         </button>
+
+        <!-- Détail inline : s'ouvre sous l'alternative sélectionnée -->
+        <div
+          class="grid transition-[grid-template-rows] duration-300 ease-out-soft"
+          :class="selectedId === r.id ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+        >
+          <div class="overflow-hidden">
+            <div
+              v-if="selectedId === r.id"
+              class="rounded-b-card border-x border-b border-olive-900 bg-olive-50 p-3"
+            >
+              <slot name="detail" />
+            </div>
+          </div>
+        </div>
       </li>
     </ul>
-  </div>
+  </section>
 </template>

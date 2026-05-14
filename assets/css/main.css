@@ -2,38 +2,187 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://rsms.me/inter/inter.css');
+
 html,
 body,
 #__nuxt {
   height: 100%;
+  height: 100dvh;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
-  font-feature-settings: 'cv11', 'ss01';
+  @apply bg-cream-50 text-ink-900 antialiased;
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+  overscroll-behavior-y: contain;
 }
 
+/* Carte claire */
 .leaflet-container {
-  background: #f1f5f9;
+  background: #E8E4D8;
+  font-family: inherit;
+}
+
+/* Contrôles Leaflet discrets */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 14px -4px rgba(42, 42, 38, 0.2) !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+.leaflet-control-zoom a {
+  background: #fcfbf7 !important;
+  color: #2f6b3f !important;
+  font-weight: 600 !important;
+  border-bottom-color: #e7e2d5 !important;
+}
+.leaflet-control-attribution {
+  background: rgba(252, 251, 247, 0.88) !important;
+  color: #6b6a60 !important;
+  font-size: 10px !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+}
+.leaflet-control-attribution a {
+  color: #2f6b3f !important;
 }
 
 /* Accessibilité : focus visible */
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #2f6b3f;
   outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* --- Animations (transform/opacity uniquement, neutralisées si reduced-motion) --- */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes soft-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Apparition douce (sections, lignes de liste). Le delay est posé en inline. */
+.animate-reveal {
+  animation: reveal-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-panel-in {
+  animation: panel-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Profil altimétrique : la ligne se dessine, l'aire apparaît en fondu. */
+.chart-line {
+  stroke-dasharray: 1;
+  animation: draw-line 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.chart-area {
+  animation: soft-fade 480ms ease-out 160ms both;
+}
+
+/* Transition de contenu d'onglet (mode out-in). */
+.tab-enter-active,
+.tab-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+.tab-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.tab-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Réduit le mouvement si demandé */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition;
-  }
+  /* CTA primaire — vert forêt */
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-olive-900 px-6 py-3
+           text-sm font-semibold text-white shadow-float transition
+           hover:bg-olive-800 active:scale-[0.98]
+           disabled:bg-cream-300 disabled:text-ink-400 disabled:cursor-not-allowed disabled:shadow-none;
+    min-height: 44px;
   }
-  .btn-secondary {
-    @apply btn bg-slate-200 text-slate-800 hover:bg-slate-300;
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-cream-100 px-4 py-2
+           text-sm font-medium text-ink-900 ring-1 ring-cream-200 transition
+           hover:bg-cream-200 active:scale-[0.98];
+    min-height: 44px;
   }
-  .field-label {
-    @apply block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1;
+
+  /* FAB clair avec icône verte */
+  .fab {
+    @apply flex h-11 w-11 items-center justify-center rounded-full bg-cream-100 text-ink-900
+           shadow-float transition hover:bg-cream-200 active:scale-95;
+  }
+  .fab-sm {
+    @apply flex h-9 w-9 items-center justify-center rounded-full bg-cream-100 text-ink-900
+           shadow-float transition hover:bg-cream-200 active:scale-95;
+  }
+
+  /* Pills */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold;
+  }
+  .pill-active {
+    @apply pill bg-olive-900 text-white;
+  }
+  .pill-muted {
+    @apply pill bg-cream-100 text-ink-900 ring-1 ring-cream-200;
+  }
+
+  /* Cartes : surface claire, hairline discret */
+  .card {
+    @apply rounded-card bg-cream-100 p-4 shadow-card ring-1 ring-cream-200;
+  }
+  .card-flush {
+    @apply rounded-card bg-cream-100 p-4 ring-1 ring-cream-200;
+  }
+
+  /* Drag handle du bottom sheet */
+  .drag-handle {
+    @apply mx-auto h-1 w-10 rounded-pill bg-cream-300;
   }
 }
