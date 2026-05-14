@@ -140,6 +140,18 @@ export const PATH_COLORS: Record<PathType | 'unknown', string> = {
 /** Couleur unique de la polyline quand l'analyse de terrain est indisponible. */
 export const ROUTE_DEFAULT_COLOR = '#2F6B3F'
 
+/**
+ * Couleurs du profil altimétrique (SVG natif). Synchro avec le thème
+ * « Outdoor naturel » — gridlines volontairement discrètes.
+ */
+export const CHART_COLORS = {
+  line: '#2F6B3F', // olive-900
+  area: '#7FA86B', // sage-400
+  refLine: '#E7E2D5', // cream-200 — gridlines discrètes
+  axis: '#D4CDBA', // cream-300
+  text: '#6B6A60', // ink-500
+} as const
+
 /** Profil dénivelé selon le type de côte demandé. */
 export interface HillProfile {
   /** Pénalité multiplicative selon la concentration du D+. */

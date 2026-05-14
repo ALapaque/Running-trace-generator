@@ -103,6 +103,14 @@ export default <Config>{
         'out-soft': 'cubic-bezier(0.22, 1, 0.36, 1)',
         'in-soft': 'cubic-bezier(0.55, 0, 0.55, 0.2)',
       },
+      /* Échelle de calques centralisée (du fond vers l'avant). */
+      zIndex: {
+        map: '0', // carte plein écran
+        hud: '20', // FABs, header flottant, légende
+        overlay: '30', // scrim, barre d'édition, menu export
+        panel: '40', // bottom sheet / sidebar flottante
+        toast: '50', // overlay de chargement
+      },
     },
   },
   plugins: [],

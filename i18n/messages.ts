@@ -37,7 +37,10 @@ export const fr = {
     'Très difficile': 'Très difficile',
   },
 
-  elevation: { title: 'Élévation' },
+  elevation: {
+    title: 'Élévation',
+    summary: 'Profil altimétrique sur {dist} km, altitude de {min} à {max} mètres.',
+  },
 
   terrain: {
     title: 'Types de voies',
@@ -133,7 +136,6 @@ export const fr = {
 
   fab: {
     openSettings: 'Ouvrir les paramètres',
-    runMode: 'Mode course à pied',
     reset: 'Réinitialiser',
     search: 'Rechercher',
     recenter: 'Recentrer la carte',
@@ -202,7 +204,10 @@ export const en: typeof fr = {
     'Très difficile': 'Very hard',
   },
 
-  elevation: { title: 'Elevation' },
+  elevation: {
+    title: 'Elevation',
+    summary: 'Elevation profile over {dist} km, altitude from {min} to {max} metres.',
+  },
 
   terrain: {
     title: 'Path types',
@@ -297,7 +302,6 @@ export const en: typeof fr = {
 
   fab: {
     openSettings: 'Open settings',
-    runMode: 'Running mode',
     reset: 'Reset',
     search: 'Search',
     recenter: 'Recenter map',

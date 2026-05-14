@@ -22,6 +22,30 @@ function onSelect(t: Tab): void {
   emit('update:modelValue', t.key)
 }
 
+/**
+ * Navigation clavier ARIA tablist : ←/→ vont à l'onglet activable précédent/
+ * suivant (en boucle), Home/End au premier/dernier. Activation automatique.
+ */
+function onKeydown(e: KeyboardEvent, current: Tab): void {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+  e.preventDefault()
+  const enabled = props.tabs.filter((t) => !t.disabled)
+  if (enabled.length === 0) return
+  const found = enabled.findIndex((t) => t.key === current.key)
+  const idx = found === -1 ? 0 : found
+  let next: Tab
+  if (e.key === 'Home') next = enabled[0]!
+  else if (e.key === 'End') next = enabled[enabled.length - 1]!
+  else {
+    const dir = e.key === 'ArrowRight' ? 1 : -1
+    next = enabled[(idx + dir + enabled.length) % enabled.length]!
+  }
+  emit('update:modelValue', next.key)
+  nextTick(() => {
+    listEl.value?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus()
+  })
+}
+
 // Quand 4 onglets dépassent la largeur du panneau, la barre défile :
 // on garde l'onglet actif visible.
 watch(
@@ -56,13 +80,14 @@ watch(
           : 'text-ink-500 hover:text-ink-900',
         t.disabled ? 'opacity-40 pointer-events-none' : '',
       ]"
-      style="min-height: 36px"
+      style="min-height: 44px"
       @click="onSelect(t)"
+      @keydown="onKeydown($event, t)"
     >
       {{ t.label }}
       <span
         v-if="t.badge !== undefined"
-        class="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-white/25 px-1 text-[10px] font-bold text-white"
+        class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-white/25 px-1 text-[11px] font-bold text-white"
       >
         {{ t.badge }}
       </span>

@@ -10,7 +10,7 @@
  *    espace en bas pour que le tracé reste centré dans la zone visible.
  */
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import type { LatLng } from '../types/ors'
+import type { LatLng, RoutePoint } from '../types/ors'
 import type { AnalyzedRoute } from '../types'
 import { PATH_COLORS, ROUTE_DEFAULT_COLOR } from '../config'
 import { useI18n } from '../composables/useI18n'
@@ -29,8 +29,16 @@ const props = withDefaults(
     editable?: boolean
     /** Waypoints éditables (ordonnés, 0 = départ) — utilisés en mode édition. */
     editableWaypoints?: LatLng[]
+    /** Point survolé sur le profil altimétrique — matérialisé sur le tracé. */
+    highlightPoint?: RoutePoint | null
   }>(),
-  { showWaypoints: true, bottomInset: 0, editable: false, editableWaypoints: () => [] },
+  {
+    showWaypoints: true,
+    bottomInset: 0,
+    editable: false,
+    editableWaypoints: () => [],
+    highlightPoint: null,
+  },
 )
 
 const emit = defineEmits<{
@@ -45,6 +53,7 @@ let map: import('leaflet').Map | null = null
 let marker: import('leaflet').Marker | null = null
 let routeLayer: import('leaflet').LayerGroup | null = null
 let editLayer: import('leaflet').LayerGroup | null = null
+let highlightLayer: import('leaflet').LayerGroup | null = null
 let LRef: typeof import('leaflet') | null = null
 /** rAF de l'animation « tracé qui se dessine » — annulé au redraw / démontage. */
 let drawRaf = 0
@@ -71,6 +80,16 @@ function makeWaypointIcon(L: typeof import('leaflet'), n: number) {
     html: `<span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:#FCFBF7;color:#2F6B3F;font-size:12px;font-weight:700;border:1.5px solid #2F6B3F;box-shadow:0 1px 4px rgba(42,42,38,0.3);">${n}</span>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
+  })
+}
+
+/** Pastille de survol — point pointé sur le profil altimétrique. */
+function makeHighlightIcon(L: typeof import('leaflet')) {
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:block;width:16px;height:16px;border-radius:9999px;background:#FCFBF7;border:4px solid #2F6B3F;box-shadow:0 1px 5px rgba(42,42,38,0.45);"></span>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   })
 }
 
@@ -141,6 +160,7 @@ onMounted(async () => {
 
   routeLayer = L.layerGroup().addTo(map)
   editLayer = L.layerGroup().addTo(map)
+  highlightLayer = L.layerGroup().addTo(map)
   // Tracé déjà présent au montage (session restaurée) → on le dessine.
   if (props.route) drawRoute(props.route)
   emit('ready')
@@ -189,6 +209,28 @@ watch(
   },
   { deep: true },
 )
+
+// Pastille de survol du profil altimétrique : suit `props.highlightPoint`.
+watch(
+  () => props.highlightPoint,
+  () => {
+    drawHighlight()
+  },
+)
+
+async function drawHighlight(): Promise<void> {
+  if (!map || !highlightLayer) return
+  const L = await loadLeaflet()
+  highlightLayer.clearLayers()
+  const p = props.highlightPoint
+  if (!p) return
+  L.marker([p.lat, p.lng], {
+    icon: makeHighlightIcon(L),
+    interactive: false,
+    keyboard: false,
+    zIndexOffset: 1200,
+  }).addTo(highlightLayer)
+}
 
 async function drawEditWaypoints(): Promise<void> {
   if (!map || !editLayer) return

@@ -191,7 +191,7 @@ function onScrimClick(): void {
   >
     <div
       v-if="scrimVisible"
-      class="fixed inset-0 z-30 bg-ink-900/40"
+      class="fixed inset-0 z-overlay bg-ink-900/40"
       @click="onScrimClick"
       aria-hidden="true"
     />
@@ -199,7 +199,7 @@ function onScrimClick(): void {
 
   <section
     ref="sheetEl"
-    class="fixed inset-x-0 bottom-0 z-40 flex w-full flex-col rounded-t-sheet bg-cream-50 shadow-sheet will-change-[height]"
+    class="fixed inset-x-0 bottom-0 z-panel flex w-full flex-col rounded-t-sheet bg-cream-50 shadow-sheet will-change-[height]"
     :style="{ height: sheetVisibleHeight, transition }"
     role="dialog"
     aria-modal="false"
@@ -232,7 +232,7 @@ function onScrimClick(): void {
     <!-- Footer optionnel (toujours visible, sous la zone scroll) -->
     <div
       v-if="$slots.footer"
-      class="shrink-0 border-t border-cream-200 bg-cream-50 px-4 pt-3"
+      class="shrink-0 border-t border-cream-300 bg-cream-50 px-4 pt-3"
       style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
     >
       <slot name="footer" />

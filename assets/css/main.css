@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://rsms.me/inter/inter.css');
+/* La police Inter est chargée via <link> dans nuxt.config (preconnect +
+   stylesheet) — un @import ici sérialiserait la requête derrière le CSS. */
 
 html,
 body,
@@ -147,22 +148,24 @@ body {
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-pill bg-cream-100 px-4 py-2
-           text-sm font-medium text-ink-900 ring-1 ring-cream-200 transition
+           text-sm font-medium text-ink-900 ring-1 ring-cream-300 transition
            hover:bg-cream-200 active:scale-[0.98];
     min-height: 44px;
   }
 
-  /* FAB clair avec icône verte */
+  /* FAB clair avec icône verte. Taille tactile 44x44 (cible minimale). */
   .fab {
     @apply flex h-11 w-11 items-center justify-center rounded-full bg-cream-100 text-ink-900
            shadow-float transition hover:bg-cream-200 active:scale-95;
   }
+  /* Variante visuellement plus discrète (icône plus petite) mais zone tactile 44x44. */
   .fab-sm {
-    @apply flex h-9 w-9 items-center justify-center rounded-full bg-cream-100 text-ink-900
+    @apply flex h-11 w-11 items-center justify-center rounded-full bg-cream-100 text-ink-900
            shadow-float transition hover:bg-cream-200 active:scale-95;
   }
 
-  /* Pills */
+  /* Pills — chips compactes (radios, actions). Zone tactile élargie via le
+     padding ; un min-height 44px les rendrait disproportionnées en flex-wrap. */
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold;
   }
@@ -170,15 +173,15 @@ body {
     @apply pill bg-olive-900 text-white;
   }
   .pill-muted {
-    @apply pill bg-cream-100 text-ink-900 ring-1 ring-cream-200;
+    @apply pill bg-cream-100 text-ink-900 ring-1 ring-cream-300;
   }
 
   /* Cartes : surface claire, hairline discret */
   .card {
-    @apply rounded-card bg-cream-100 p-4 shadow-card ring-1 ring-cream-200;
+    @apply rounded-card bg-cream-100 p-4 shadow-card ring-1 ring-cream-300;
   }
   .card-flush {
-    @apply rounded-card bg-cream-100 p-4 ring-1 ring-cream-200;
+    @apply rounded-card bg-cream-100 p-4 ring-1 ring-cream-300;
   }
 
   /* Drag handle du bottom sheet */

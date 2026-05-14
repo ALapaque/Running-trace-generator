@@ -9,7 +9,7 @@ export default defineNuxtConfig({
       title: 'RunGen — Générateur de traces GPX',
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
           content:
@@ -21,6 +21,10 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-title', content: 'RunGen' },
       ],
       link: [
+        // Police Inter — preconnect + stylesheet (chargement parallèle, pas
+        // sérialisé derrière le CSS comme le ferait un @import).
+        { rel: 'preconnect', href: 'https://rsms.me', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://rsms.me/inter/inter.css' },
         {
           rel: 'stylesheet',
           href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

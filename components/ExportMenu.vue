@@ -102,34 +102,13 @@ async function onCopyLink(): Promise<void> {
       aria-haspopup="menu"
       @click="toggle"
     >
-      <svg
-        viewBox="0 0 24 24"
-        class="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
-      </svg>
+      <Icon name="download" class="h-4 w-4" />
       <span>{{ t('export.save') }}</span>
-      <svg
-        viewBox="0 0 24 24"
+      <Icon
+        name="chevron-down"
         class="h-3.5 w-3.5 transition-transform"
         :class="open ? 'rotate-180' : ''"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
+      />
     </button>
 
     <transition
@@ -142,7 +121,7 @@ async function onCopyLink(): Promise<void> {
            desktop (le menu passe en haut-gauche, la sidebar prend la droite). -->
       <div
         v-if="open"
-        class="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-card border border-cream-200 bg-cream-100 shadow-float lg:left-0 lg:right-auto"
+        class="absolute right-0 z-overlay mt-2 w-60 overflow-hidden rounded-card border border-cream-300 bg-cream-100 shadow-float lg:left-0 lg:right-auto"
         role="menu"
       >
         <button
@@ -153,10 +132,7 @@ async function onCopyLink(): Promise<void> {
           @click="sendTo('komoot')"
         >
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-olive-900 text-white">
-            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
+            <Icon name="komoot" class="h-4 w-4" />
           </span>
           <span class="flex-1">
             <span class="block text-sm font-semibold text-ink-900">Komoot</span>
@@ -172,9 +148,7 @@ async function onCopyLink(): Promise<void> {
           @click="sendTo('strava')"
         >
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-terracotta-500 text-white">
-            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
-              <path d="M9 4l5 10h-3l-2-4-2 4H3L9 4zm6 9l2.5 5L20 13h-2.2l-.3.6-.5-1.1L15 13z" />
-            </svg>
+            <Icon name="strava" class="h-4 w-4" />
           </span>
           <span class="flex-1">
             <span class="block text-sm font-semibold text-ink-900">Strava</span>
@@ -182,7 +156,7 @@ async function onCopyLink(): Promise<void> {
           </span>
         </button>
 
-        <div class="border-t border-cream-200" />
+        <div class="border-t border-cream-300" />
 
         <button
           type="button"
@@ -191,20 +165,7 @@ async function onCopyLink(): Promise<void> {
           @click="onDownload"
         >
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-cream-200 text-ink-900">
-            <svg
-              viewBox="0 0 24 24"
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            <Icon name="download" class="h-4 w-4" />
           </span>
           <span class="flex-1">
             <span class="block text-sm font-semibold text-ink-900">{{ t('export.downloadGpx') }}</span>
@@ -220,19 +181,7 @@ async function onCopyLink(): Promise<void> {
           @click="onCopyLink"
         >
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-cream-200 text-ink-900">
-            <svg
-              viewBox="0 0 24 24"
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
+            <Icon name="link" class="h-4 w-4" />
           </span>
           <span class="flex-1">
             <span class="block text-sm font-semibold text-ink-900">{{ t('export.copyLink') }}</span>
@@ -240,7 +189,7 @@ async function onCopyLink(): Promise<void> {
           </span>
         </button>
 
-        <p v-if="hint" class="border-t border-cream-200 px-4 py-2 text-xs text-ink-500 break-all">
+        <p v-if="hint" class="border-t border-cream-300 px-4 py-2 text-xs text-ink-500 break-all">
           {{ hint }}
         </p>
       </div>

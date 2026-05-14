@@ -36,7 +36,7 @@ function fmtDuration(distanceM: number): string {
 <template>
   <section>
     <div class="mb-3 flex items-center justify-between">
-      <h3 class="text-base font-bold text-ink-900">{{ t('history.title') }}</h3>
+      <h2 class="text-base font-bold text-ink-900">{{ t('history.title') }}</h2>
       <button
         v-if="entries.length"
         type="button"
@@ -63,7 +63,7 @@ function fmtDuration(distanceM: number): string {
             'flex items-center gap-3 border p-3 transition',
             selectedId === entry.id
               ? 'rounded-t-card border-olive-900 bg-olive-50'
-              : 'rounded-card border-cream-200 bg-cream-100 hover:border-cream-300',
+              : 'rounded-card border-cream-300 bg-cream-100 hover:border-ink-300',
           ]"
         >
           <button
@@ -89,23 +89,11 @@ function fmtDuration(distanceM: number): string {
           </button>
           <button
             type="button"
-            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-ink-400 transition hover:bg-cream-200 hover:text-terracotta-600"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-ink-500 transition hover:bg-cream-200 hover:text-terracotta-600"
             :aria-label="t('history.remove', { date: fmtDate(entry.ts) })"
             @click="emit('remove', entry.id)"
           >
-            <svg
-              viewBox="0 0 24 24"
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
+            <Icon name="trash" class="h-4 w-4" />
           </button>
         </div>
 

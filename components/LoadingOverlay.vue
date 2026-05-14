@@ -40,17 +40,14 @@ const visible = computed(
   >
     <div
       v-if="visible"
-      class="pointer-events-none fixed inset-x-0 top-6 z-50 mx-auto flex w-fit max-w-[90vw] items-center justify-center"
+      class="pointer-events-none fixed inset-x-0 top-6 z-toast mx-auto flex w-fit max-w-[90vw] items-center justify-center"
       role="status"
       aria-live="polite"
     >
       <div
-        class="pointer-events-auto flex items-center gap-3 rounded-pill bg-cream-100 px-4 py-2.5 shadow-float ring-1 ring-cream-200"
+        class="pointer-events-auto flex items-center gap-3 rounded-pill bg-cream-100 px-4 py-2.5 shadow-float ring-1 ring-cream-300"
       >
-        <svg class="h-4 w-4 shrink-0 animate-spin text-olive-900" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.2" stroke-width="3" />
-          <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        </svg>
+        <Icon name="spinner" class="h-4 w-4 shrink-0 animate-spin text-olive-900" />
         <span class="text-sm font-semibold text-ink-900">{{ label }}</span>
         <span class="font-mono text-xs text-ink-500 tabular-nums">
           {{ Math.round(progress * 100) }}%

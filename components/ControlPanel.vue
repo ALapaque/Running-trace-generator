@@ -218,17 +218,11 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             'flex flex-col items-start gap-1.5 rounded-card border px-4 py-3 text-left transition active:scale-[0.98]',
             form.mode === 'running'
               ? 'border-olive-900 bg-olive-900 text-cream-50 shadow-card'
-              : 'border-cream-200 bg-cream-100 text-ink-900 hover:bg-cream-200',
+              : 'border-cream-300 bg-cream-100 text-ink-900 hover:bg-cream-200',
           ]"
           @click="form.mode = 'running'"
         >
-          <!-- Route avec marquage central -->
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 22 L9 2" />
-            <path d="M19 22 L15 2" />
-            <line x1="12" y1="5" x2="12" y2="9" />
-            <line x1="12" y1="13" x2="12" y2="17" />
-          </svg>
+          <Icon name="road" class="h-5 w-5" />
           <span class="text-sm font-semibold">{{ t('mode.running') }}</span>
           <span
             class="text-xs"
@@ -246,16 +240,11 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             'flex flex-col items-start gap-1.5 rounded-card border px-4 py-3 text-left transition active:scale-[0.98]',
             form.mode === 'trail'
               ? 'border-olive-900 bg-olive-900 text-cream-50 shadow-card'
-              : 'border-cream-200 bg-cream-100 text-ink-900 hover:bg-cream-200',
+              : 'border-cream-300 bg-cream-100 text-ink-900 hover:bg-cream-200',
           ]"
           @click="form.mode = 'trail'"
         >
-          <!-- Sapin -->
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 2 L7 11 H17 Z" />
-            <path d="M12 8 L5 18 H19 Z" />
-            <line x1="12" y1="18" x2="12" y2="22" />
-          </svg>
+          <Icon name="pine" class="h-5 w-5" />
           <span class="text-sm font-semibold">{{ t('mode.trail') }}</span>
           <span
             class="text-xs"
@@ -274,69 +263,35 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </label>
       <div class="mt-1 flex gap-2">
         <div class="relative flex-1">
-          <svg
-            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          <Icon
+            name="search"
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500"
+          />
           <input
             id="address-search"
             v-model="geocodeQuery"
             type="text"
             :placeholder="t('control.searchPlaceholder')"
-            class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
+            class="w-full rounded-pill border border-cream-300 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
             autocomplete="off"
           />
         </div>
         <button
           type="button"
-          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-300 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
           style="min-width: 44px; min-height: 44px;"
           :aria-label="geo.loading.value ? t('control.locating') : t('control.useLocation')"
           :aria-busy="geo.loading.value || undefined"
           :disabled="geo.loading.value"
           @click="useCurrentPosition"
         >
-          <svg
-            v-if="!geo.loading.value"
-            viewBox="0 0 24 24"
-            class="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2" x2="12" y2="5" />
-            <line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" />
-            <line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
-          <svg
-            v-else
-            class="h-5 w-5 animate-spin text-olive-900"
-            viewBox="0 0 24 24"
-            fill="none"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
-            <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-          </svg>
+          <Icon v-if="!geo.loading.value" name="locate" class="h-5 w-5" />
+          <Icon v-else name="spinner" class="h-5 w-5 animate-spin text-olive-900" />
         </button>
       </div>
       <ul
         v-if="geocodeResults.length"
-        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-200 bg-cream-100 text-sm shadow-card"
+        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-300 bg-cream-100 text-sm shadow-card"
         role="listbox"
       >
         <li
@@ -352,7 +307,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-if="geo.error.value" class="mt-2 text-xs text-terracotta-600" role="alert">
         {{ geo.error.value }}
       </p>
-      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">{{ t('control.searching') }}</p>
+      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-500">{{ t('control.searching') }}</p>
     </section>
 
     <!-- Distance (plage, optionnelle) -->
@@ -394,7 +349,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           />
           <span class="text-unit text-ink-500">km</span>
         </p>
-        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedF') }}</span>
+        <span v-else class="text-xs text-ink-500">{{ t('control.unconstrainedF') }}</span>
       </div>
       <RangeSlider
         v-show="form.useDistance"
@@ -447,7 +402,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           />
           <span class="text-unit text-ink-500">m</span>
         </p>
-        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedM') }}</span>
+        <span v-else class="text-xs text-ink-500">{{ t('control.unconstrainedM') }}</span>
       </div>
       <RangeSlider
         v-show="form.useElevation"
