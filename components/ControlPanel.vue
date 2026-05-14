@@ -321,7 +321,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           </span>
           <span class="text-label uppercase text-ink-500">{{ t('control.distance') }}</span>
         </label>
-        <p v-if="form.useDistance" class="flex items-center gap-1">
+        <p v-if="form.useDistance" class="flex items-baseline gap-1">
           <input
             type="number"
             class="range-num text-stat-sm tabular-nums"
@@ -374,7 +374,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           </span>
           <span class="text-label uppercase text-ink-500">{{ t('control.elevation') }}</span>
         </label>
-        <p v-if="form.useElevation" class="flex items-center gap-1">
+        <p v-if="form.useElevation" class="flex items-baseline gap-1">
           <input
             type="number"
             class="range-num text-stat-sm tabular-nums"
@@ -481,8 +481,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 .range-num {
   box-sizing: content-box;
   width: 4ch;
-  min-height: 44px;
-  padding: 1px 6px;
+  padding: 1px 4px;
   text-align: right;
   color: inherit;
   background: transparent;

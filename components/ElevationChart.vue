@@ -171,7 +171,6 @@ watch(
       style="touch-action: pan-y"
       role="img"
       :aria-label="summary"
-      @pointerdown="updateCursor"
       @pointermove="updateCursor"
       @pointerleave="clearCursor"
       @pointercancel="clearCursor"

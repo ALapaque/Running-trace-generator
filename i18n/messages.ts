@@ -42,10 +42,6 @@ export const fr = {
     summary: 'Profil altimétrique sur {dist} km, altitude de {min} à {max} mètres.',
   },
 
-  hints: {
-    firstRun: 'Touchez la carte ou cherchez une adresse pour définir le point de départ.',
-  },
-
   terrain: {
     title: 'Types de voies',
     route: 'Route',
@@ -211,10 +207,6 @@ export const en: typeof fr = {
   elevation: {
     title: 'Elevation',
     summary: 'Elevation profile over {dist} km, altitude from {min} to {max} metres.',
-  },
-
-  hints: {
-    firstRun: 'Tap the map or search an address to set your start point.',
   },
 
   terrain: {

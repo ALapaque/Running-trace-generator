@@ -154,15 +154,6 @@ const loading = computed(
 
 const hasResults = computed(() => pipeline.results.value.length > 0)
 
-/** Indice de premier lancement : tant qu'aucun parcours n'est à l'écran. */
-const showFirstRunHint = computed(
-  () =>
-    pipeline.stage.value === 'idle' &&
-    !hasResults.value &&
-    !viewedHistoryRoute.value &&
-    !editMode.value,
-)
-
 /**
  * Espace (px) à réserver en bas du fitBounds.
  * - Mobile : hauteur du bottom sheet selon son snap.
@@ -462,26 +453,6 @@ watch(selectedRoute, () => {
     >
       <MapLegend class="pointer-events-auto" :terrain="selectedRoute.terrain" />
     </div>
-
-    <!-- Indice de premier lancement — guide vers le placement du départ.
-         Mutuellement exclusif avec le LoadingOverlay (idle vs génération). -->
-    <transition
-      enter-active-class="transition-opacity duration-200 ease-out-soft"
-      leave-active-class="transition-opacity duration-200 ease-in-soft"
-      enter-from-class="opacity-0"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="showFirstRunHint"
-        class="pointer-events-none absolute inset-x-0 top-6 z-hud mx-auto flex w-fit max-w-[88vw] justify-center px-3"
-      >
-        <p
-          class="rounded-pill bg-cream-100 px-4 py-2 text-xs font-medium text-ink-700 shadow-float ring-1 ring-cream-300"
-        >
-          {{ t('hints.firstRun') }}
-        </p>
-      </div>
-    </transition>
 
     <!-- Loading overlay (toast en haut) -->
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />

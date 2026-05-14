@@ -164,10 +164,10 @@ body {
            shadow-float transition hover:bg-cream-200 active:scale-95;
   }
 
-  /* Pills — min-height 44px pour les pills interactives (radios, actions). */
+  /* Pills — chips compactes (radios, actions). Zone tactile élargie via le
+     padding ; un min-height 44px les rendrait disproportionnées en flex-wrap. */
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-xs font-semibold;
-    min-height: 44px;
+    @apply inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold;
   }
   .pill-active {
     @apply pill bg-olive-900 text-white;
