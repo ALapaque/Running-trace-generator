@@ -25,8 +25,7 @@ export const RouteFormSchema = v.pipe(
     // Distance et dénivelé optionnels (`null` = non contraint).
     distanceKm: v.nullable(rangeSchema(DISTANCE_BOUNDS_KM)),
     elevationGainM: v.nullable(rangeSchema(ELEVATION_BOUNDS_M)),
-    terrain: v.picklist(['route', 'chemin_large', 'single', 'mixte']),
-    preferForest: v.boolean(),
+    mode: v.picklist(['running', 'trail']),
     hills: v.picklist(['plat', 'vallonné', 'montagneux']),
   }),
   v.check(

@@ -11,9 +11,9 @@ export interface ScoringWeights {
   w_dist: number
   /** Écart relatif D+ cible vs D+ réel. */
   w_dplus: number
-  /** Pénalité si le tracé ne respecte pas le type de chemin demandé. */
+  /** Pénalité si le tracé n'utilise pas les voies adaptées au mode (route / sentier). */
   w_chemin: number
-  /** Pénalité si toggle forêt activé et tracé pauvre en forêt. */
+  /** Pénalité si mode trail et tracé pauvre en forêt. */
   w_foret: number
   /** Pénalité de profil (plat / vallonné / montagneux). */
   w_profile: number
@@ -29,6 +29,13 @@ export const SCORING_WEIGHTS: ScoringWeights = {
 
 /** Génération ORS — nombre de candidats à générer en parallèle (valeur min). */
 export const ORS_CANDIDATES = 8
+
+/**
+ * Poids `green` envoyé à ORS en mode trail (`options.profile_params.weightings`).
+ * 0 = neutre, 1 = détour maximal vers les espaces verts. ~0.8 biaise fortement
+ * vers forêts/parcs/sentiers sans trop dégrader la cible de distance.
+ */
+export const TRAIL_GREEN_WEIGHT = 0.8
 
 /** Options proposées à l'utilisateur pour le nombre d'alternatives retournées. */
 export const RESULTS_COUNT_OPTIONS = [3, 5, 10] as const

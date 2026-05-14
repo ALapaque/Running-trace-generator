@@ -15,11 +15,13 @@ import {
   ORS_CANDIDATES,
   ORS_FETCH_TIMEOUT_MS,
   ORS_OVER_REQUEST_RATIO,
+  TRAIL_GREEN_WEIGHT,
 } from '../config'
 import type {
   LatLng,
   RouteCandidate,
   RouteGenerationInput,
+  RouteMode,
   RoutePoint,
 } from '../types/ors'
 
@@ -37,12 +39,11 @@ export class OrsApiError extends Error {
   }
 }
 
-/** Mappe le terrain demandé sur le profile ORS le plus adapté. */
-function mapProfile(_terrain: RouteGenerationInput['terrain']): 'foot-hiking' | 'foot-walking' {
-  // foot-hiking favorise sentiers et chemins, foot-walking favorise les voies piétonnes urbaines.
-  // L'algo de scoring fait l'essentiel du tri, on garde foot-hiking par défaut pour avoir
-  // accès à un graphe plus large (sentiers OSM).
-  return 'foot-hiking'
+/** Mappe le mode de course sur le profile ORS le plus adapté. */
+function mapProfile(mode: RouteMode): 'foot-hiking' | 'foot-walking' {
+  // foot-walking favorise les voies carrossables/urbaines (running sur route),
+  // foot-hiking favorise sentiers et chemins (trail).
+  return mode === 'trail' ? 'foot-hiking' : 'foot-walking'
 }
 
 function buildOrsBody(input: RouteGenerationInput, seed: number, lengthM: number) {
@@ -57,6 +58,11 @@ function buildOrsBody(input: RouteGenerationInput, seed: number, lengthM: number
         points: 5,
         seed,
       },
+      // En mode trail, on biaise activement la génération vers les espaces
+      // verts (forêts, parcs, bords de rivière). En running, routing neutre.
+      ...(input.mode === 'trail'
+        ? { profile_params: { weightings: { green: TRAIL_GREEN_WEIGHT } } }
+        : {}),
     },
   }
 }
@@ -153,7 +159,7 @@ async function fetchOrsCandidate(
   lengthM: number,
   signal?: AbortSignal,
 ): Promise<RouteCandidate> {
-  const profile = mapProfile(input.terrain)
+  const profile = mapProfile(input.mode)
   const body = buildOrsBody(input, seed, lengthM)
   const data = await postOrs(config, profile, body, signal)
   return parseOrsResponse(data, `cand-${seed}`, seed)

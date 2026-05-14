@@ -3,8 +3,8 @@
  *
  * score = w_dist     * |distance_real - cible| / cible
  *       + w_dplus    * |dplus - dplus_cible| / max(dplus_cible, 1)
- *       + w_chemin   * (1 - % du type demandé)
- *       + w_foret    * (1 - % forêt)   [si toggle activé]
+ *       + w_chemin   * (1 - % de voies adaptées au mode)
+ *       + w_foret    * (1 - % forêt)   [mode trail uniquement]
  *       + w_profile  * pénalité_shape(type_de_côte)
  *
  * Plus le score est bas, mieux c'est. Retourne le top 3 trié.
@@ -14,7 +14,7 @@ import { HILL_PROFILES, SCORING_WEIGHTS } from '../config'
 import { climbConcentration } from '../utils/climbs'
 import type { AnalyzedRoute } from '../types'
 import type { TerrainStats } from '../types/osm'
-import type { HillPreference, RouteCandidate, RouteGenerationInput, TerrainPreference } from '../types/ors'
+import type { HillPreference, RouteCandidate, RouteGenerationInput, RouteMode } from '../types/ors'
 
 interface AnalyzedInput {
   candidate: RouteCandidate
@@ -31,18 +31,15 @@ export function computeClimbConcentration(candidate: RouteCandidate): number {
   return climbConcentration(candidate.points)
 }
 
-function terrainShare(stats: TerrainStats, pref: TerrainPreference): number {
-  switch (pref) {
-    case 'route':
-      return stats.route
-    case 'chemin_large':
-      return stats.chemin_large
-    case 'single':
-      return stats.single
-    case 'mixte':
-      // Pour 'mixte', on récompense la diversité : pas de pénalité majeure.
-      return 1 - stats.unknown
-  }
+/**
+ * Part du tracé correspondant au mode demandé :
+ *  - running : on récompense le bitume / les routes carrossables.
+ *  - trail   : on récompense les sentiers et chemins (single + chemin large).
+ */
+function modeShare(stats: TerrainStats, mode: RouteMode): number {
+  return mode === 'running'
+    ? stats.route
+    : Math.min(1, stats.single + stats.chemin_large)
 }
 
 function profilePenalty(
@@ -84,8 +81,9 @@ export function useScoring() {
           request.elevationGainM.max,
         )
       : 0
-    const terrainErr = 1 - terrainShare(input.terrain, request.terrain)
-    const forestErr = request.preferForest ? 1 - input.terrain.forest : 0
+    const terrainErr = 1 - modeShare(input.terrain, request.mode)
+    // La composante forêt ne contraint le scoring qu'en mode trail.
+    const forestErr = request.mode === 'trail' ? 1 - input.terrain.forest : 0
     const concentration = computeClimbConcentration(input.candidate)
     const profileErr = profilePenalty(input.candidate, request.hills, concentration)
 
@@ -94,7 +92,7 @@ export function useScoring() {
     const effectiveWeights = {
       ...SCORING_WEIGHTS,
       w_chemin: input.fallback ? 0 : SCORING_WEIGHTS.w_chemin,
-      w_foret: input.fallback || !request.preferForest ? 0 : SCORING_WEIGHTS.w_foret,
+      w_foret: input.fallback || request.mode !== 'trail' ? 0 : SCORING_WEIGHTS.w_foret,
     }
 
     const scoreBreakdown = {
