@@ -16,6 +16,7 @@ import { computed, ref, watch } from 'vue'
 import BottomSheet, { type SheetSnap } from '../components/BottomSheet.vue'
 import ControlPanel, { type ControlPanelSubmit } from '../components/ControlPanel.vue'
 import ElevationChart from '../components/ElevationChart.vue'
+import ExportMenu from '../components/ExportMenu.vue'
 import FloatingButton from '../components/FloatingButton.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import MapView from '../components/MapView.vue'
@@ -36,7 +37,6 @@ const activeTab = ref<TabKey>('settings')
 let abort: AbortController | null = null
 
 const pipeline = useRoutePipeline()
-const gpx = useGpxExport()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
 
@@ -109,10 +109,6 @@ function onSelectRoute(id: string): void {
   selectedId.value = id
 }
 
-function onDownload(): void {
-  if (selectedRoute.value) gpx.exportRoute(selectedRoute.value)
-}
-
 function onReset(): void {
   abort?.abort()
   pipeline.reset()
@@ -173,20 +169,7 @@ watch(activeTab, (t) => {
 
       <!-- Top-right : Enregistrer + reset -->
       <div class="pointer-events-auto flex items-center gap-2">
-        <button
-          v-if="selectedRoute"
-          type="button"
-          class="btn-primary"
-          @click="onDownload"
-          aria-label="Télécharger le parcours en GPX"
-        >
-          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          <span>Enregistrer</span>
-        </button>
+        <ExportMenu v-if="selectedRoute" :route="selectedRoute" />
 
          <FloatingButton
           v-if="hasResults"
