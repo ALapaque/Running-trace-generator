@@ -72,7 +72,7 @@ const sheetBottomInset = computed(() => {
     case 'mid':
       return Math.round(vh * 0.55)
     default:
-      return 200
+      return 172
   }
 })
 
@@ -240,14 +240,14 @@ watch(activeTab, (t) => {
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />
 
     <!-- Bottom sheet -->
-    <BottomSheet v-model:snap="snap" :peek-px="200">
-      <!-- Tabs sticky -->
-      <div class="sticky top-0 z-10 -mx-4 mb-4 bg-cream-50 px-4 pb-3 pt-1">
+    <BottomSheet v-model:snap="snap" :peek-px="172">
+      <!-- Header fixe : onglets (toujours visibles, hors scroll) -->
+      <template #header>
         <SheetTabs v-model="activeTab" :tabs="tabs" />
-      </div>
+      </template>
 
       <!-- Contenu par onglet -->
-      <div v-if="activeTab === 'details' && selectedRoute" class="space-y-6">
+      <div v-if="activeTab === 'details' && selectedRoute" class="space-y-6 pt-1">
         <RouteStats :route="selectedRoute" />
 
         <!-- Pills difficulté / rythme -->
@@ -272,7 +272,7 @@ watch(activeTab, (t) => {
         />
       </div>
 
-      <div v-else-if="activeTab === 'settings'">
+      <div v-else-if="activeTab === 'settings'" class="pt-1">
         <ControlPanel
           ref="cpRef"
           :start="start"
@@ -282,7 +282,7 @@ watch(activeTab, (t) => {
         />
       </div>
 
-      <div v-else-if="activeTab === 'alternatives' && hasResults">
+      <div v-else-if="activeTab === 'alternatives' && hasResults" class="pt-1">
         <RouteAlternatives
           :routes="pipeline.results.value"
           :selectedId="selectedId"

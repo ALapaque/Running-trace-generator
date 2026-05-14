@@ -202,9 +202,9 @@ function onScrimClick(): void {
     aria-modal="false"
     aria-label="Détails du parcours"
   >
-    <!-- Zone draggable : poignée -->
+    <!-- Zone draggable : poignée (le drag est aussi capté sur le header) -->
     <div
-      class="shrink-0 cursor-grab touch-none select-none py-3 active:cursor-grabbing"
+      class="shrink-0 cursor-grab touch-none select-none pt-3 pb-1 active:cursor-grabbing"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
@@ -216,7 +216,12 @@ function onScrimClick(): void {
       <span class="drag-handle block" />
     </div>
 
-    <!-- Contenu scrollable, occupe l'espace restant entre poignée et footer -->
+    <!-- Header optionnel : toujours visible (hors scroll), ex. onglets -->
+    <div v-if="$slots.header" class="shrink-0 px-4 pb-3 pt-1">
+      <slot name="header" />
+    </div>
+
+    <!-- Contenu scrollable, occupe l'espace restant entre header et footer -->
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">
       <slot />
     </div>
