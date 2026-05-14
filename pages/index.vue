@@ -12,7 +12,7 @@
  *  - Top-right : enregistrer (GPX) + close (réinitialiser)
  *  - Bottom-right (au-dessus du sheet peek) : zoom in/out, recenter
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import BottomSheet, { type SheetSnap } from '../components/BottomSheet.vue'
 import ControlPanel, { type ControlPanelSubmit } from '../components/ControlPanel.vue'
 import ElevationChart from '../components/ElevationChart.vue'
@@ -22,14 +22,18 @@ import FloatingPanel from '../components/FloatingPanel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import MapView from '../components/MapView.vue'
 import RouteAlternatives from '../components/RouteAlternatives.vue'
+import RouteHistory from '../components/RouteHistory.vue'
 import RouteStats from '../components/RouteStats.vue'
 import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
 import TerrainBreakdown from '../components/TerrainBreakdown.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
+import { historyEntryToRoute, useRouteHistory } from '../composables/useRouteHistory'
+import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/share-url'
+import type { AnalyzedRoute, GenerationParams } from '../types'
 import type { LatLng } from '../types/ors'
 
-type TabKey = 'details' | 'settings' | 'alternatives'
+type TabKey = 'details' | 'settings' | 'alternatives' | 'history'
 
 const start = ref<LatLng | null>(null)
 const selectedId = ref<string | null>(null)
@@ -38,10 +42,17 @@ const activeTab = ref<TabKey>('settings')
 let abort: AbortController | null = null
 
 const pipeline = useRoutePipeline()
+const history = useRouteHistory()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
 /** Validité du formulaire (départ défini + au moins distance ou dénivelé actif). */
 const formValid = ref(false)
+/** Paramètres décodés depuis le hash de l'URL au chargement (prefill du formulaire). */
+const initialParams = ref<GenerationParams | null>(null)
+/** Derniers paramètres soumis (pour le hash d'URL + le lien de partage). */
+const lastParams = ref<GenerationParams | null>(null)
+/** Parcours d'historique actuellement affiché (prioritaire sur les résultats du pipeline). */
+const viewedHistoryRoute = ref<AnalyzedRoute | null>(null)
 
 // Desktop ≥ 1024px → sidebar flottante draggable ; sinon bottom sheet.
 const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -63,6 +74,8 @@ function triggerSubmit(): void {
 }
 
 const selectedRoute = computed(() => {
+  // Un parcours d'historique consulté prend le pas sur les résultats du pipeline.
+  if (viewedHistoryRoute.value) return viewedHistoryRoute.value
   if (!selectedId.value) return pipeline.results.value[0] ?? null
   return pipeline.results.value.find((r) => r.id === selectedId.value) ?? null
 })
@@ -103,13 +116,18 @@ const fabClusterStyle = computed(() => {
 })
 
 const tabs = computed<Tab[]>(() => [
-  { key: 'details', label: 'Détails', disabled: !hasResults.value },
+  { key: 'details', label: 'Détails', disabled: !selectedRoute.value },
   { key: 'settings', label: 'Paramètres' },
   {
     key: 'alternatives',
     label: 'Alternatives',
     disabled: !hasResults.value,
     badge: hasResults.value ? pipeline.results.value.length : undefined,
+  },
+  {
+    key: 'history',
+    label: 'Historique',
+    badge: history.list.value.length || undefined,
   },
 ])
 
@@ -121,9 +139,16 @@ async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
   abort?.abort()
   abort = new AbortController()
   const { resultsCount, ...input } = payload
+  // Mémorise les paramètres : hash d'URL partageable + lien d'export.
+  lastParams.value = { ...payload }
+  if (typeof window !== 'undefined') {
+    window.history.replaceState(null, '', `#${encodeParams(payload)}`)
+  }
   try {
+    viewedHistoryRoute.value = null
     const top = await pipeline.run(input, { signal: abort.signal, resultsCount })
     selectedId.value = top[0]?.id ?? null
+    if (top[0]) history.add(top[0])
     activeTab.value = 'details'
     snap.value = 'mid'
   } catch {
@@ -132,6 +157,7 @@ async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
 }
 
 function onSelectRoute(id: string): void {
+  viewedHistoryRoute.value = null
   selectedId.value = id
 }
 
@@ -139,8 +165,44 @@ function onReset(): void {
   abort?.abort()
   pipeline.reset()
   selectedId.value = null
+  viewedHistoryRoute.value = null
   activeTab.value = 'settings'
 }
+
+// --- Historique ---
+function onSelectHistory(id: string): void {
+  const entry = history.list.value.find((e) => e.id === id)
+  if (!entry) return
+  viewedHistoryRoute.value = historyEntryToRoute(entry)
+  activeTab.value = 'details'
+  snap.value = 'mid'
+}
+
+const viewedHistoryId = computed(() =>
+  viewedHistoryRoute.value && history.list.value.some((e) => e.id === viewedHistoryRoute.value!.id)
+    ? viewedHistoryRoute.value.id
+    : null,
+)
+
+function onRemoveHistory(id: string): void {
+  history.remove(id)
+  if (viewedHistoryRoute.value?.id === id) viewedHistoryRoute.value = null
+}
+
+function onClearHistory(): void {
+  history.clear()
+  viewedHistoryRoute.value = null
+}
+
+// Restaure les paramètres depuis le hash de l'URL au chargement (lien partagé).
+onMounted(() => {
+  const decoded = decodeParamsFromHash(window.location.hash)
+  if (decoded) {
+    initialParams.value = decoded
+    start.value = decoded.start
+    activeTab.value = 'settings'
+  }
+})
 
 // Quand on bascule sur l'onglet Paramètres, déplie la sheet pour montrer le formulaire.
 watch(activeTab, (t) => {
@@ -196,7 +258,7 @@ watch(activeTab, (t) => {
 
       <!-- Top-right : Enregistrer + reset -->
       <div class="pointer-events-auto flex items-center gap-2">
-        <ExportMenu v-if="selectedRoute" :route="selectedRoute" />
+        <ExportMenu v-if="selectedRoute" :route="selectedRoute" :params="lastParams" />
 
          <FloatingButton
           v-if="hasResults"
@@ -283,6 +345,7 @@ watch(activeTab, (t) => {
           ref="cpRef"
           :start="start"
           :loading="loading"
+          :initial="initialParams"
           @submit="onSubmit"
           @pickStart="onPickStart"
           @update:valid="formValid = $event"
@@ -294,6 +357,16 @@ watch(activeTab, (t) => {
           :routes="pipeline.results.value"
           :selectedId="selectedId"
           @select="(id) => { onSelectRoute(id); activeTab = 'details' }"
+        />
+      </div>
+
+      <div v-else-if="activeTab === 'history'" class="pt-1">
+        <RouteHistory
+          :entries="history.list.value"
+          :selectedId="viewedHistoryId"
+          @select="onSelectHistory"
+          @remove="onRemoveHistory"
+          @clear="onClearHistory"
         />
       </div>
 

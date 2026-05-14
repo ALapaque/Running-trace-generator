@@ -20,16 +20,61 @@ import {
 } from '../config'
 import { useGeocoding, type GeocodeResult } from '../composables/useGeocoding'
 import { useGeolocation } from '../composables/useGeolocation'
+import { readJson, writeJson } from '../utils/storage'
 import RangeSlider from './RangeSlider.vue'
+import type { GenerationParams } from '../types'
 import type { LatLng, RouteGenerationInput } from '../types/ors'
 
 export interface ControlPanelSubmit extends RouteGenerationInput {
   resultsCount: ResultsCount
 }
 
+interface FormState {
+  useDistance: boolean
+  distanceKm: { min: number; max: number }
+  useElevation: boolean
+  elevationGainM: { min: number; max: number }
+  terrain: RouteGenerationInput['terrain']
+  preferForest: boolean
+  hills: RouteGenerationInput['hills']
+  resultsCount: ResultsCount
+}
+
+const FORM_STORAGE_KEY = 'rungen:form:v1'
+
+function defaultForm(): FormState {
+  return {
+    useDistance: true,
+    distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
+    useElevation: false,
+    elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
+    terrain: 'mixte',
+    preferForest: false,
+    hills: 'vallonné',
+    resultsCount: DEFAULT_RESULTS_COUNT,
+  }
+}
+
+/** Traduit des GenerationParams (URL/historique) en état de formulaire. */
+function formFromParams(p: GenerationParams): FormState {
+  const base = defaultForm()
+  return {
+    useDistance: p.distanceKm !== null,
+    distanceKm: p.distanceKm ?? base.distanceKm,
+    useElevation: p.elevationGainM !== null,
+    elevationGainM: p.elevationGainM ?? base.elevationGainM,
+    terrain: p.terrain,
+    preferForest: p.preferForest,
+    hills: p.hills,
+    resultsCount: (p.resultsCount as ResultsCount) ?? base.resultsCount,
+  }
+}
+
 const props = defineProps<{
   start: LatLng | null
   loading: boolean
+  /** Paramètres initiaux (lien partagé) — priment sur le localStorage. */
+  initial?: GenerationParams | null
 }>()
 
 const emit = defineEmits<{
@@ -38,17 +83,19 @@ const emit = defineEmits<{
   (e: 'update:valid', valid: boolean): void
 }>()
 
-const form = reactive({
-  // Distance et dénivelé sont optionnels mais au moins un doit être actif.
-  useDistance: true,
-  distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
-  useElevation: false,
-  elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
-  terrain: 'mixte' as RouteGenerationInput['terrain'],
-  preferForest: false,
-  hills: 'vallonné' as RouteGenerationInput['hills'],
-  resultsCount: DEFAULT_RESULTS_COUNT as ResultsCount,
-})
+// Priorité d'initialisation : URL partagée > localStorage > défauts.
+const initialForm: FormState = props.initial
+  ? formFromParams(props.initial)
+  : { ...defaultForm(), ...(readJson<Partial<FormState>>(FORM_STORAGE_KEY) ?? {}) }
+
+const form = reactive<FormState>(initialForm)
+
+// Persiste le formulaire à chaque changement (restauré au prochain chargement).
+watch(
+  form,
+  () => writeJson(FORM_STORAGE_KEY, { ...form }),
+  { deep: true },
+)
 
 /** Au moins un critère actif + point de départ défini. */
 const valid = computed(

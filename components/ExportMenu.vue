@@ -9,9 +9,14 @@
  */
 import { onBeforeUnmount, ref } from 'vue'
 import { useGpxExport } from '../composables/useGpxExport'
-import type { AnalyzedRoute } from '../types'
+import { buildShareUrl } from '../utils/share-url'
+import type { AnalyzedRoute, GenerationParams } from '../types'
 
-const props = defineProps<{ route: AnalyzedRoute }>()
+const props = defineProps<{
+  route: AnalyzedRoute
+  /** Paramètres de la dernière génération — pour le lien partageable. */
+  params?: GenerationParams | null
+}>()
 
 const { exportRoute, shareRoute } = useGpxExport()
 
@@ -70,6 +75,18 @@ async function sendTo(target: 'komoot' | 'strava'): Promise<void> {
 function onDownload(): void {
   exportRoute(props.route)
   open.value = false
+}
+
+async function onCopyLink(): Promise<void> {
+  if (!props.params) return
+  const url = buildShareUrl(props.params)
+  try {
+    await navigator.clipboard.writeText(url)
+    hint.value = 'Lien copié — il rouvre l’app avec ces paramètres.'
+  } catch {
+    // clipboard indisponible (contexte non sécurisé) → on affiche le lien.
+    hint.value = url
+  }
 }
 </script>
 
@@ -193,7 +210,35 @@ function onDownload(): void {
           </span>
         </button>
 
-        <p v-if="hint" class="border-t border-cream-200 px-4 py-2 text-xs text-ink-500">
+        <button
+          v-if="params"
+          type="button"
+          role="menuitem"
+          class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-cream-200"
+          @click="onCopyLink"
+        >
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-cream-200 text-ink-900">
+            <svg
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </span>
+          <span class="flex-1">
+            <span class="block text-sm font-semibold text-ink-900">Copier le lien</span>
+            <span class="block text-xs text-ink-500">Rouvre l’app avec ces paramètres</span>
+          </span>
+        </button>
+
+        <p v-if="hint" class="border-t border-cream-200 px-4 py-2 text-xs text-ink-500 break-all">
           {{ hint }}
         </p>
       </div>
