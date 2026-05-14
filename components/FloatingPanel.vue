@@ -136,6 +136,12 @@ onBeforeUnmount(() => {
         <slot />
       </div>
 
+      <!-- Fondu en bas du scroll (contenu coupé estompé, pas tranché). -->
+      <div
+        class="pointer-events-none -mt-6 h-6 shrink-0 bg-gradient-to-t from-cream-100 to-transparent"
+        aria-hidden="true"
+      />
+
       <!-- Footer optionnel -->
       <div
         v-if="$slots.footer"

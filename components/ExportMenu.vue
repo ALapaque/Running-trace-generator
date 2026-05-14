@@ -17,6 +17,8 @@ const props = defineProps<{
   route: AnalyzedRoute
   /** Paramètres de la dernière génération — pour le lien partageable. */
   params?: GenerationParams | null
+  /** Ouvre le menu vers le haut (bouton ancré en bas de l'écran). */
+  dropUp?: boolean
 }>()
 
 const { exportRoute, shareRoute } = useGpxExport()
@@ -114,14 +116,17 @@ async function onCopyLink(): Promise<void> {
     <transition
       enter-active-class="transition duration-150 ease-out-soft"
       leave-active-class="transition duration-100 ease-in-soft"
-      enter-from-class="opacity-0 -translate-y-1"
-      leave-to-class="opacity-0 -translate-y-1"
+      :enter-from-class="dropUp ? 'opacity-0 translate-y-1' : 'opacity-0 -translate-y-1'"
+      :leave-to-class="dropUp ? 'opacity-0 translate-y-1' : 'opacity-0 -translate-y-1'"
     >
-      <!-- Aligné à droite sur mobile (menu en haut-droite), à gauche sur
-           desktop (le menu passe en haut-gauche, la sidebar prend la droite). -->
+      <!-- `dropUp` : ouvre vers le haut (bouton ancré en bas, desktop). Sinon
+           vers le bas, aligné à droite (mobile) ou à gauche (desktop sidebar). -->
       <div
         v-if="open"
-        class="absolute right-0 z-overlay mt-2 w-60 overflow-hidden rounded-card border border-cream-300 bg-cream-100 shadow-float lg:left-0 lg:right-auto"
+        :class="[
+          'absolute z-overlay w-60 overflow-hidden rounded-card border border-cream-300 bg-cream-100 shadow-float',
+          dropUp ? 'bottom-full left-0 mb-2' : 'right-0 mt-2 lg:left-0 lg:right-auto',
+        ]"
         role="menu"
       >
         <button

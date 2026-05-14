@@ -108,6 +108,8 @@ async function useCurrentPosition(): Promise<void> {
   try {
     const pos = await geo.request()
     emit('pickStart', pos)
+    // Mise à jour programmatique du champ → ne pas relancer de recherche.
+    suppressGeocode = true
     geocodeQuery.value = t('control.myLocation')
     geocodeResults.value = []
   } catch {
@@ -119,6 +121,8 @@ const geocodeQuery = ref('')
 const geocodeResults = ref<GeocodeResult[]>([])
 const geocoding = ref(false)
 let geocodeAbort: AbortController | null = null
+/** Saute la prochaine recherche déclenchée par une mise à jour programmatique. */
+let suppressGeocode = false
 const { search } = useGeocoding()
 
 async function runGeocode(): Promise<void> {
@@ -141,10 +145,17 @@ async function runGeocode(): Promise<void> {
 let geocodeTimer: ReturnType<typeof setTimeout> | null = null
 watch(geocodeQuery, () => {
   if (geocodeTimer) clearTimeout(geocodeTimer)
+  // Changement programmatique (géoloc / sélection d'un résultat) : on ne
+  // relance pas de recherche, sinon un résultat parasite réapparaît.
+  if (suppressGeocode) {
+    suppressGeocode = false
+    return
+  }
   geocodeTimer = setTimeout(runGeocode, 350)
 })
 
 function selectGeocode(r: GeocodeResult): void {
+  suppressGeocode = true
   emit('pickStart', r.position)
   geocodeResults.value = []
   geocodeQuery.value = r.label
@@ -199,7 +210,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 </script>
 
 <template>
-  <form class="flex flex-col gap-6" @submit.prevent="onSubmit">
+  <form class="flex flex-col gap-5" @submit.prevent="onSubmit">
     <!-- Type de course : sélecteur héro Running / Trail.
          Pilote le profil ORS (foot-walking vs foot-hiking + weighting green)
          et le scoring (bitume vs sentiers + forêt). -->
@@ -256,12 +267,15 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </div>
     </section>
 
-    <!-- Recherche adresse + ma position -->
-    <section>
+    <!-- Réglages : départ, contraintes et préférences regroupés dans une
+         carte à séparateurs pour une hiérarchie claire. -->
+    <div class="divide-y divide-cream-300 rounded-card bg-cream-100 px-4 ring-1 ring-cream-300">
+      <!-- Recherche adresse + ma position -->
+      <section class="py-4">
       <label for="address-search" class="text-label uppercase text-ink-500">
         {{ t('control.start') }}
       </label>
-      <div class="mt-1 flex gap-2">
+      <div class="mt-1.5 flex gap-2">
         <div class="relative flex-1">
           <Icon
             name="search"
@@ -272,13 +286,13 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             v-model="geocodeQuery"
             type="text"
             :placeholder="t('control.searchPlaceholder')"
-            class="w-full rounded-pill border border-cream-300 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
+            class="w-full rounded-pill border border-cream-300 bg-cream-50 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
             autocomplete="off"
           />
         </div>
         <button
           type="button"
-          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-300 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-300 bg-cream-50 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
           style="min-width: 44px; min-height: 44px;"
           :aria-label="geo.loading.value ? t('control.locating') : t('control.useLocation')"
           :aria-busy="geo.loading.value || undefined"
@@ -291,7 +305,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </div>
       <ul
         v-if="geocodeResults.length"
-        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-300 bg-cream-100 text-sm shadow-card"
+        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-300 bg-cream-50 text-sm shadow-card"
         role="listbox"
       >
         <li
@@ -310,8 +324,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-else-if="geocoding" class="mt-1 text-xs text-ink-500">{{ t('control.searching') }}</p>
     </section>
 
-    <!-- Distance (plage, optionnelle) -->
-    <section>
+      <!-- Distance (plage, optionnelle) -->
+      <section class="py-4">
       <div class="flex items-center justify-between">
         <label class="flex cursor-pointer items-center gap-2">
           <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
@@ -363,8 +377,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       />
     </section>
 
-    <!-- Dénivelé positif (plage, optionnelle) -->
-    <section>
+      <!-- Dénivelé positif (plage, optionnelle) -->
+      <section class="py-4">
       <div class="flex items-center justify-between">
         <label class="flex cursor-pointer items-center gap-2">
           <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
@@ -416,12 +430,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       />
     </section>
 
-    <p v-if="!form.useDistance && !form.useElevation" class="text-xs text-terracotta-600">
-      {{ t('control.atLeastOne') }}
-    </p>
-
-    <!-- Côtes -->
-    <section>
+      <!-- Côtes -->
+      <section class="py-4">
       <span class="text-label uppercase text-ink-500">{{ t('control.hillType') }}</span>
       <div
         class="mt-2 flex flex-wrap gap-2"
@@ -442,8 +452,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </div>
     </section>
 
-    <!-- Nombre d'alternatives -->
-    <section>
+      <!-- Nombre d'alternatives -->
+      <section class="py-4">
       <span class="text-label uppercase text-ink-500">{{ t('control.alternativesCount') }}</span>
       <div
         class="mt-2 flex flex-wrap gap-2"
@@ -465,7 +475,17 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-if="form.resultsCount >= 10" class="mt-2 text-xs text-ink-500">
         {{ t('control.quotaWarning') }}
       </p>
-    </section>
+      </section>
+    </div>
+
+    <!-- Alerte : au moins un critère actif (distance ou dénivelé) requis. -->
+    <p
+      v-if="!form.useDistance && !form.useElevation"
+      class="rounded-card bg-terracotta-500/10 px-4 py-3 text-xs text-terracotta-600"
+      role="alert"
+    >
+      {{ t('control.atLeastOne') }}
+    </p>
 
     <!-- CTA Générer : rendu par la page dans le footer du BottomSheet
          (via défineExpose `submit` + slot `#footer`). -->
