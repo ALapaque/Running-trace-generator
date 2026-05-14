@@ -17,6 +17,10 @@ const props = defineProps<{
   min: number
   max: number
   step: number
+  /** Libellé du critère pour les lecteurs d'écran (ex. « Distance »). */
+  ariaLabel?: string
+  /** Unité annoncée aux lecteurs d'écran (ex. « km », « m »). */
+  unit?: string
 }>()
 
 const emit = defineEmits<{ (e: 'update:modelValue', value: NumberRange): void }>()
@@ -37,6 +41,9 @@ function onMaxInput(e: Event): void {
   const clamped = Math.max(raw, props.modelValue.min)
   emit('update:modelValue', { min: props.modelValue.min, max: clamped })
 }
+
+const unitSuffix = computed(() => (props.unit ? ` ${props.unit}` : ''))
+const labelBase = computed(() => props.ariaLabel ?? 'Valeur')
 </script>
 
 <template>
@@ -56,7 +63,8 @@ function onMaxInput(e: Event): void {
       :max="max"
       :step="step"
       :value="modelValue.min"
-      aria-label="Valeur minimale"
+      :aria-label="`${labelBase} minimale`"
+      :aria-valuetext="`${modelValue.min}${unitSuffix}`"
       @input="onMinInput"
     />
     <input
@@ -66,7 +74,8 @@ function onMaxInput(e: Event): void {
       :max="max"
       :step="step"
       :value="modelValue.max"
-      aria-label="Valeur maximale"
+      :aria-label="`${labelBase} maximale`"
+      :aria-valuetext="`${modelValue.max}${unitSuffix}`"
       @input="onMaxInput"
     />
   </div>

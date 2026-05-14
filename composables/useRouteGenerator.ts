@@ -82,6 +82,11 @@ interface OrsGeoJson {
   }>
 }
 
+/** True si on route via le proxy serverless (baseUrl relatif). */
+function isProxied(baseUrl: string): boolean {
+  return baseUrl.startsWith('/')
+}
+
 /** POST commun vers ORS directions, avec gestion 429 / erreurs. */
 async function postOrs(
   config: { baseUrl: string; apiKey: string },
@@ -90,13 +95,16 @@ async function postOrs(
   signal?: AbortSignal,
 ): Promise<OrsGeoJson> {
   const url = `${config.baseUrl}/v2/directions/${profile}/geojson`
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/geo+json',
+  }
+  // En mode proxy, c'est le serveur qui injecte la clé : pas d'Authorization client.
+  if (!isProxied(config.baseUrl)) headers.Authorization = config.apiKey
+
   const res = await fetchWithTimeout(url, {
     method: 'POST',
-    headers: {
-      Authorization: config.apiKey,
-      'Content-Type': 'application/json',
-      Accept: 'application/geo+json',
-    },
+    headers,
     body: JSON.stringify(body),
     timeoutMs: ORS_FETCH_TIMEOUT_MS,
     externalSignal: signal,
@@ -181,13 +189,15 @@ export function useRouteGenerator() {
     input: RouteGenerationInput,
     options: { count?: number; signal?: AbortSignal } = {},
   ): Promise<{ candidates: RouteCandidate[]; quotaExceeded: boolean }> {
+    const baseUrl = config.public.orsBaseUrl
     const apiKey = config.public.orsApiKey
-    if (!apiKey) {
+    // En mode proxy, la clé est côté serveur ; sinon elle est requise côté client.
+    if (!isProxied(baseUrl) && !apiKey) {
       throw new Error(
         "Clé OpenRouteService manquante : définir NUXT_PUBLIC_ORS_API_KEY dans .env",
       )
     }
-    const orsConfig = { baseUrl: config.public.orsBaseUrl, apiKey }
+    const orsConfig = { baseUrl, apiKey }
     const count = options.count ?? ORS_CANDIDATES
 
     // Seeds pseudo-aléatoires distincts pour explorer différentes formes de boucle.
@@ -238,12 +248,13 @@ export function useRouteGenerator() {
     waypoints: LatLng[],
     signal?: AbortSignal,
   ): Promise<RouteCandidate> {
+    const baseUrl = config.public.orsBaseUrl
     const apiKey = config.public.orsApiKey
-    if (!apiKey) {
+    if (!isProxied(baseUrl) && !apiKey) {
       throw new Error("Clé OpenRouteService manquante : définir NUXT_PUBLIC_ORS_API_KEY dans .env")
     }
     if (waypoints.length < 2) throw new Error('Au moins 2 points sont nécessaires')
-    const orsConfig = { baseUrl: config.public.orsBaseUrl, apiKey }
+    const orsConfig = { baseUrl, apiKey }
     const data = await postOrs(
       orsConfig,
       'foot-hiking',

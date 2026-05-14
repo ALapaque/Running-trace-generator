@@ -63,8 +63,26 @@ NUXT_PUBLIC_ORS_API_KEY=eyJvcmciOiI1Yj...
 ```
 
 > ⚠️ La clé est exposée côté client (c'est inhérent à une app sans backend).
-> Si quelqu'un récupère ta clé, il consomme ton quota. Pour un déploiement public,
-> envisage de proxy via Cloudflare Workers ou similaire.
+> Si quelqu'un récupère ta clé, il consomme ton quota.
+
+### Proxy ORS (optionnel — masque la clé)
+
+Pour un déploiement public, un **proxy serverless opt-in** masque la clé ORS.
+Il est **inerte par défaut** (l'app reste « zéro backend »). Pour l'activer :
+
+1. Définir la clé **côté serveur** : `NUXT_ORS_API_KEY=...` (sans `PUBLIC_`).
+2. Pointer le client vers le proxy : `NUXT_PUBLIC_ORS_BASE_URL=/api/ors`.
+3. Ne pas définir `NUXT_PUBLIC_ORS_API_KEY` (la clé ne transite plus côté client).
+
+La route `server/api/ors/[...path].post.ts` relaie alors les appels vers ORS
+en injectant la clé serveur. Sur Vercel, c'est une fonction serverless du
+free tier. Sans ces variables, la route renvoie 503 et n'est jamais appelée.
+
+### Progressive Web App
+
+L'app est installable (manifest + service worker `public/sw.js`) : app shell
+et tuiles de carte mises en cache → consultation hors-ligne d'un parcours déjà
+chargé. Les appels API (ORS / Overpass / Nominatim) restent en réseau direct.
 
 ---
 

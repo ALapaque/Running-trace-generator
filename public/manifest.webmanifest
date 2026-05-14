@@ -1,0 +1,20 @@
+{
+  "name": "RunGen — Générateur de traces GPX",
+  "short_name": "RunGen",
+  "description": "Génère des boucles de running personnalisées et exporte-les en GPX.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F1EA",
+  "theme_color": "#2F6B3F",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}

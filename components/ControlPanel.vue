@@ -299,6 +299,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         :min="DISTANCE_BOUNDS_KM.min"
         :max="DISTANCE_BOUNDS_KM.max"
         :step="DISTANCE_BOUNDS_KM.step"
+        aria-label="Distance"
+        unit="km"
       />
     </section>
 
@@ -328,6 +330,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         :min="ELEVATION_BOUNDS_M.min"
         :max="ELEVATION_BOUNDS_M.max"
         :step="ELEVATION_BOUNDS_M.step"
+        aria-label="Dénivelé positif"
+        unit="m"
       />
     </section>
 
