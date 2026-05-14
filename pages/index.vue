@@ -25,11 +25,12 @@ import RouteDetail from '../components/RouteDetail.vue'
 import RouteHistory from '../components/RouteHistory.vue'
 import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
-import { useI18n } from '../composables/useI18n'
+import { LOCALES, useI18n } from '../composables/useI18n'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
 import { useRouteGenerator } from '../composables/useRouteGenerator'
 import { useRouteHistory, historyEntryToRoute } from '../composables/useRouteHistory'
 import { useRunnerPace } from '../composables/useRunnerPace'
+import { useLastResults } from '../composables/useLastResults'
 import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/share-url'
 import { reverseRoute } from '../utils/route-ops'
 import { climbConcentration } from '../utils/climbs'
@@ -46,9 +47,16 @@ let abort: AbortController | null = null
 
 const pipeline = useRoutePipeline()
 const history = useRouteHistory()
+const lastResults = useLastResults()
 const { pace, cycle: cyclePace } = useRunnerPace()
-const { t } = useI18n()
+const { t, locale, setLocale } = useI18n()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
+
+/** Bascule la langue (FR ↔ EN). */
+function cycleLocale(): void {
+  const idx = LOCALES.indexOf(locale.value)
+  setLocale(LOCALES[(idx + 1) % LOCALES.length]!)
+}
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
 /** Validité du formulaire (départ défini + au moins distance ou dénivelé actif). */
 const formValid = ref(false)
@@ -204,6 +212,8 @@ async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
     const top = await pipeline.run(input, { signal: abort.signal, resultsCount })
     selectedId.value = top[0]?.id ?? null
     if (top[0]) history.add(top[0])
+    // Persiste la session : un reload restaure alternatives + sélection.
+    lastResults.saveResults(pipeline.results.value, selectedId.value, lastParams.value)
     activeTab.value = 'alternatives'
     snap.value = 'mid'
   } catch {
@@ -216,12 +226,14 @@ function onSelectRoute(id: string): void {
   viewedHistoryRoute.value = null
   reversed.value = false
   selectedId.value = id
+  lastResults.saveSelectedId(id)
 }
 
 function onReset(): void {
   abort?.abort()
   pipeline.reset()
   clearEditState()
+  lastResults.clear()
   selectedId.value = null
   viewedHistoryRoute.value = null
   reversed.value = false
@@ -317,13 +329,24 @@ function onClearHistory(): void {
   viewedHistoryRoute.value = null
 }
 
-// Restaure les paramètres depuis le hash de l'URL au chargement (lien partagé).
+// Au chargement : lien partagé (hash URL) prioritaire, sinon restauration
+// de la dernière session générée (alternatives + sélection) depuis localStorage.
 onMounted(() => {
   const decoded = decodeParamsFromHash(window.location.hash)
   if (decoded) {
     initialParams.value = decoded
     start.value = decoded.start
     activeTab.value = 'settings'
+    return
+  }
+  const session = lastResults.stored.value
+  if (session.results.length) {
+    pipeline.restore(session.results)
+    selectedId.value = session.selectedId
+    lastParams.value = session.params
+    if (session.params) start.value = session.params.start
+    activeTab.value = 'alternatives'
+    snap.value = 'mid'
   }
 })
 
@@ -357,9 +380,14 @@ watch(activeTab, (t) => {
       class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3"
       style="padding-top: max(0.75rem, env(safe-area-inset-top));"
     >
-      <!-- Top-left : menu paramètres / piéton (mobile uniquement —
-           sur desktop la sidebar flottante remplace ces raccourcis) -->
-      <div v-if="!isDesktop" class="pointer-events-auto flex flex-col gap-2">
+      <!-- Top-left : sélecteur de langue (toujours) + raccourcis paramètres /
+           piéton (mobile uniquement — sur desktop la sidebar les remplace) -->
+      <div class="pointer-events-auto flex flex-col gap-2">
+        <FloatingButton :label="t('lang.label')" @click="cycleLocale">
+          <span class="text-sm font-bold uppercase">{{ locale }}</span>
+        </FloatingButton>
+
+        <template v-if="!isDesktop">
          <FloatingButton
           :label="t(`fab.openSettings`)"
           @click="(activeTab = 'settings'), (snap = 'full')"
@@ -381,6 +409,7 @@ watch(activeTab, (t) => {
             <path d="M9 13l3-5 4 3-2 4" />
           </svg>
         </FloatingButton>
+        </template>
       </div>
 
       <!-- Top-right : Enregistrer + reset -->

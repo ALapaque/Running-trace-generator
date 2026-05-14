@@ -26,8 +26,9 @@ const timeLabel = computed(() =>
 </script>
 
 <template>
-  <!-- 2 colonnes sur mobile (évite le chevauchement des gros chiffres), 4 sur large -->
-  <div class="grid grid-cols-2 gap-x-2 gap-y-4 sm:grid-cols-4">
+  <!-- 2 colonnes : le détail vit dans un panneau étroit (sheet mobile ou
+       sidebar 380px desktop), 4 colonnes ferait déborder les gros chiffres. -->
+  <div class="grid grid-cols-2 gap-x-3 gap-y-4">
     <div class="flex flex-col items-start">
       <p class="flex items-baseline gap-1">
         <span class="text-stat tabular-nums">{{ distanceKm.toFixed(2) }}</span>

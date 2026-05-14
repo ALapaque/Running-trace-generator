@@ -147,6 +147,12 @@ export function useRoutePipeline() {
     distanceToleranceRelaxed.value = false
   }
 
+  /** Restaure des résultats persistés (reload de session) sans relancer le pipeline. */
+  function restore(routes: AnalyzedRoute[]): void {
+    results.value = routes
+    stage.value = 'done'
+  }
+
   return {
     stage,
     progress,
@@ -157,5 +163,6 @@ export function useRoutePipeline() {
     results,
     run,
     reset,
+    restore,
   }
 }

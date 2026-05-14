@@ -18,13 +18,13 @@ import {
 } from '../config'
 import { useGeocoding, type GeocodeResult } from '../composables/useGeocoding'
 import { useGeolocation } from '../composables/useGeolocation'
-import { LOCALES, useI18n } from '../composables/useI18n'
+import { useI18n } from '../composables/useI18n'
 import { readJson, writeJson } from '../utils/storage'
 import RangeSlider from './RangeSlider.vue'
 import type { GenerationParams } from '../types'
 import type { LatLng, RouteGenerationInput } from '../types/ors'
 
-const { t, locale, setLocale } = useI18n()
+const { t } = useI18n()
 
 export interface ControlPanelSubmit extends RouteGenerationInput {
   resultsCount: ResultsCount
@@ -418,24 +418,6 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-if="form.resultsCount >= 10" class="mt-2 text-xs text-ink-500">
         {{ t('control.quotaWarning') }}
       </p>
-    </section>
-
-    <!-- Langue -->
-    <section>
-      <span class="text-label uppercase text-ink-500">{{ t('lang.label') }}</span>
-      <div class="mt-2 flex gap-2" role="radiogroup" :aria-label="t('lang.label')">
-        <button
-          v-for="l in LOCALES"
-          :key="l"
-          type="button"
-          role="radio"
-          :aria-checked="locale === l"
-          :class="locale === l ? 'pill-active' : 'pill-muted'"
-          @click="setLocale(l)"
-        >
-          {{ l.toUpperCase() }}
-        </button>
-      </div>
     </section>
 
     <!-- CTA Générer : rendu par la page dans le footer du BottomSheet

@@ -87,6 +87,9 @@ export const OVERPASS_DECIMATION_M = 50
 /** Décimation du tracé pour l'export GPX — environ 1 point par X mètres (Komoot limite à 10 000 points). */
 export const GPX_DECIMATION_M = 10
 
+/** Décimation du tracé pour la persistance localStorage des alternatives (compromis taille/qualité). */
+export const RESULTS_PERSIST_DECIMATION_M = 20
+
 /** Marge ajoutée au bbox Overpass autour du tracé, en degrés (~30m). */
 export const BBOX_MARGIN_DEG = 0.0003
 

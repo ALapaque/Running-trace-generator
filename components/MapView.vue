@@ -141,6 +141,8 @@ onMounted(async () => {
 
   routeLayer = L.layerGroup().addTo(map)
   editLayer = L.layerGroup().addTo(map)
+  // Tracé déjà présent au montage (session restaurée) → on le dessine.
+  if (props.route) drawRoute(props.route)
   emit('ready')
 })
 
