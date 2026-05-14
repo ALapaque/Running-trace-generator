@@ -16,6 +16,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import BottomSheet, { type SheetSnap } from '../components/BottomSheet.vue'
 import ControlPanel, { type ControlPanelSubmit } from '../components/ControlPanel.vue'
 import ExportMenu from '../components/ExportMenu.vue'
+import FlagIcon from '../components/FlagIcon.vue'
 import FloatingButton from '../components/FloatingButton.vue'
 import FloatingPanel from '../components/FloatingPanel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
@@ -404,7 +405,7 @@ watch(selectedRoute, () => {
            piéton (mobile uniquement — sur desktop la sidebar les remplace) -->
       <div class="pointer-events-auto flex flex-col gap-2">
         <FloatingButton :label="t('lang.label')" @click="cycleLocale">
-          <span class="text-sm font-bold uppercase">{{ locale }}</span>
+          <FlagIcon :locale="locale" />
         </FloatingButton>
 
         <template v-if="!isDesktop">
