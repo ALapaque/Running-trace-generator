@@ -59,14 +59,27 @@ function buildOrsBody(input: RouteGenerationInput, seed: number, lengthM: number
   }
 }
 
+/**
+ * Longueur (m) demandée à ORS pour le candidat `index` parmi `total`.
+ * On répartit les cibles sur toute la plage [min, max] pour produire des
+ * candidats de longueurs variées ; le scoring/filtre tri ensuite.
+ */
+function targetLengthForIndex(input: RouteGenerationInput, index: number, total: number): number {
+  const minKm = input.distanceKm.min
+  const maxKm = input.distanceKm.max
+  const t = total <= 1 ? 0.5 : index / (total - 1)
+  const km = minKm + (maxKm - minKm) * t
+  return km * 1000 * ORS_OVER_REQUEST_RATIO
+}
+
 async function fetchOrsCandidate(
   config: { baseUrl: string; apiKey: string },
   input: RouteGenerationInput,
   seed: number,
+  lengthM: number,
   signal?: AbortSignal,
 ): Promise<RouteCandidate> {
   const profile = mapProfile(input.terrain)
-  const lengthM = input.distanceKm * 1000 * ORS_OVER_REQUEST_RATIO
   const body = buildOrsBody(input, seed, lengthM)
   const url = `${config.baseUrl}/v2/directions/${profile}/geojson`
 
@@ -172,7 +185,15 @@ export function useRouteGenerator() {
     }
 
     const settled = await Promise.allSettled(
-      seeds.map((seed) => fetchOrsCandidate(orsConfig, input, seed, options.signal)),
+      seeds.map((seed, i) =>
+        fetchOrsCandidate(
+          orsConfig,
+          input,
+          seed,
+          targetLengthForIndex(input, i, seeds.length),
+          options.signal,
+        ),
+      ),
     )
 
     const candidates: RouteCandidate[] = []

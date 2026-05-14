@@ -312,7 +312,7 @@ watch(activeTab, (t) => {
         v-if="pipeline.distanceToleranceRelaxed.value"
         class="mt-2 rounded-card bg-cream-100 px-4 py-3 text-xs text-terracotta-600"
       >
-        Aucun candidat dans la tolérance de ±7,5 % — les meilleurs hors gabarit sont retournés.
+        Aucun candidat dans la plage de distance demandée — les meilleurs hors gabarit sont retournés.
       </div>
 
       <!-- CTA Générer rendu dans le footer du sheet (toujours visible sur l'onglet Paramètres) -->

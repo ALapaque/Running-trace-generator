@@ -8,10 +8,18 @@ export interface LatLng {
   lng: number
 }
 
+/** Plage de valeurs min–max (inclusive). */
+export interface NumberRange {
+  min: number
+  max: number
+}
+
 export interface RouteGenerationInput {
   start: LatLng
-  distanceKm: number
-  elevationGainM: number
+  /** Plage de distance acceptée, en km. */
+  distanceKm: NumberRange
+  /** Plage de dénivelé positif acceptée, en mètres. */
+  elevationGainM: NumberRange
   terrain: TerrainPreference
   preferForest: boolean
   hills: HillPreference

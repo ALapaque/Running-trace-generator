@@ -73,15 +73,29 @@ function profilePenalty(
   return Math.max(0, Math.min(1, profile.penalty(candidate.elevationGainM, distanceKm, concentration)))
 }
 
+/**
+ * Erreur d'une valeur vis-à-vis d'une plage [min, max] :
+ *  - 0 si la valeur est dans la plage
+ *  - sinon, écart au bord le plus proche, normalisé par le milieu de plage.
+ */
+export function rangeError(value: number, min: number, max: number): number {
+  if (value >= min && value <= max) return 0
+  const ref = Math.max((min + max) / 2, 1)
+  return value < min ? (min - value) / ref : (value - max) / ref
+}
+
 export function useScoring() {
   function scoreOne(input: AnalyzedInput, request: RouteGenerationInput): AnalyzedRoute {
-    const targetDistanceM = request.distanceKm * 1000
-    const targetGainM = request.elevationGainM
-
-    const distanceErr =
-      Math.abs(input.candidate.distanceM - targetDistanceM) / Math.max(targetDistanceM, 1)
-    const elevationErr =
-      Math.abs(input.candidate.elevationGainM - targetGainM) / Math.max(targetGainM, 1)
+    const distanceErr = rangeError(
+      input.candidate.distanceM,
+      request.distanceKm.min * 1000,
+      request.distanceKm.max * 1000,
+    )
+    const elevationErr = rangeError(
+      input.candidate.elevationGainM,
+      request.elevationGainM.min,
+      request.elevationGainM.max,
+    )
     const terrainErr = 1 - terrainShare(input.terrain, request.terrain)
     const forestErr = request.preferForest ? 1 - input.terrain.forest : 0
     const concentration = computeClimbConcentration(input.candidate)

@@ -74,17 +74,19 @@ export function useRoutePipeline() {
 
       stage.value = 'scoring'
 
-      // Filtrage strict par tolérance distance avant scoring : ORS peut
-      // sur-livrer fortement sur les courtes distances (ex. demande 7 km,
-      // renvoie 10 km). On écarte tout candidat hors gabarit, sauf si on
-      // se retrouve avec trop peu de candidats.
-      const targetM = input.distanceKm * 1000
+      // Filtrage par plage de distance avant scoring : on garde les candidats
+      // dont la distance tombe dans [min, max] élargie d'une petite tolérance
+      // (ORS sur-livre parfois). Si trop peu passent, on relâche la contrainte.
+      const minM = input.distanceKm.min * 1000
+      const maxM = input.distanceKm.max * 1000
       const toleranceM = Math.max(
         DISTANCE_TOLERANCE_ABS_MIN_M,
-        targetM * DISTANCE_TOLERANCE_RATIO,
+        ((minM + maxM) / 2) * DISTANCE_TOLERANCE_RATIO,
       )
       const within = analyses.filter(
-        (a) => Math.abs(a.candidate.distanceM - targetM) <= toleranceM,
+        (a) =>
+          a.candidate.distanceM >= minM - toleranceM &&
+          a.candidate.distanceM <= maxM + toleranceM,
       )
       const usable = within.length >= Math.min(resultsCount, 3) ? within : analyses
       distanceToleranceRelaxed.value = usable !== within

@@ -1,14 +1,15 @@
 <script setup lang="ts">
 /**
- * Formulaire de génération — pensé pour vivre dans la bottom sheet (mode `full`).
- * - Recherche d'adresse au sommet (sticky)
- * - Sliders distance / D+ avec affichage en grand
+ * Formulaire de génération — pensé pour vivre dans la bottom sheet / sidebar.
+ * - Recherche d'adresse + géolocalisation
+ * - Plages distance / D+ via sliders à deux poignées
  * - Pills pour terrain et type de côte
  * - Toggle forêt
- * - CTA principal "Générer" en sticky bas
  */
 import { reactive, ref, watch } from 'vue'
 import {
+  DEFAULT_DISTANCE_RANGE_KM,
+  DEFAULT_ELEVATION_RANGE_M,
   DEFAULT_RESULTS_COUNT,
   DISTANCE_BOUNDS_KM,
   ELEVATION_BOUNDS_M,
@@ -19,6 +20,7 @@ import {
 } from '../config'
 import { useGeocoding, type GeocodeResult } from '../composables/useGeocoding'
 import { useGeolocation } from '../composables/useGeolocation'
+import RangeSlider from './RangeSlider.vue'
 import type { LatLng, RouteGenerationInput } from '../types/ors'
 
 export interface ControlPanelSubmit extends RouteGenerationInput {
@@ -36,8 +38,8 @@ const emit = defineEmits<{
 }>()
 
 const form = reactive({
-  distanceKm: 10,
-  elevationGainM: 150,
+  distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
+  elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
   terrain: 'mixte' as RouteGenerationInput['terrain'],
   preferForest: false,
   hills: 'vallonné' as RouteGenerationInput['hills'],
@@ -96,8 +98,8 @@ function onSubmit(): void {
   if (!props.start) return
   emit('submit', {
     start: props.start,
-    distanceKm: form.distanceKm,
-    elevationGainM: form.elevationGainM,
+    distanceKm: { ...form.distanceKm },
+    elevationGainM: { ...form.elevationGainM },
     terrain: form.terrain,
     preferForest: form.preferForest,
     hills: form.hills,
@@ -215,43 +217,43 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </p>
     </section>
 
-    <!-- Distance -->
+    <!-- Distance (plage) -->
     <section>
       <div class="flex items-baseline justify-between">
-        <label for="distance" class="text-label uppercase text-ink-500">Distance</label>
+        <span class="text-label uppercase text-ink-500">Distance</span>
         <p class="flex items-baseline gap-1">
-          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.toFixed(1) }}</span>
+          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.min.toFixed(1) }}</span>
+          <span class="text-unit text-ink-500">–</span>
+          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.max.toFixed(1) }}</span>
           <span class="text-unit text-ink-500">km</span>
         </p>
       </div>
-      <input
-        id="distance"
-        v-model.number="form.distanceKm"
-        type="range"
+      <RangeSlider
+        v-model="form.distanceKm"
+        class="mt-2"
         :min="DISTANCE_BOUNDS_KM.min"
         :max="DISTANCE_BOUNDS_KM.max"
         :step="DISTANCE_BOUNDS_KM.step"
-        class="mt-2 w-full accent-olive-900"
       />
     </section>
 
-    <!-- Dénivelé -->
+    <!-- Dénivelé positif (plage) -->
     <section>
       <div class="flex items-baseline justify-between">
-        <label for="elevation" class="text-label uppercase text-ink-500">Dénivelé positif</label>
+        <span class="text-label uppercase text-ink-500">Dénivelé positif</span>
         <p class="flex items-baseline gap-1">
-          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM }}</span>
+          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.min }}</span>
+          <span class="text-unit text-ink-500">–</span>
+          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.max }}</span>
           <span class="text-unit text-ink-500">m</span>
         </p>
       </div>
-      <input
-        id="elevation"
-        v-model.number="form.elevationGainM"
-        type="range"
+      <RangeSlider
+        v-model="form.elevationGainM"
+        class="mt-2"
         :min="ELEVATION_BOUNDS_M.min"
         :max="ELEVATION_BOUNDS_M.max"
         :step="ELEVATION_BOUNDS_M.step"
-        class="mt-2 w-full accent-olive-900"
       />
     </section>
 

@@ -66,6 +66,10 @@ export const DISTANCE_BOUNDS_KM = { min: 3, max: 50, step: 0.5 } as const
 /** D+ min/max acceptée par l'app, en mètres. */
 export const ELEVATION_BOUNDS_M = { min: 0, max: 2000, step: 50 } as const
 
+/** Plages par défaut du formulaire (sélection min–max). */
+export const DEFAULT_DISTANCE_RANGE_KM = { min: 8, max: 12 } as const
+export const DEFAULT_ELEVATION_RANGE_M = { min: 100, max: 300 } as const
+
 /** Vitesse running par défaut pour estimer le temps (min/km). */
 export const PACE_MIN_PER_KM = 6
 
