@@ -22,7 +22,7 @@ import { useI18n } from '../composables/useI18n'
 import { readJson, writeJson } from '../utils/storage'
 import RangeSlider from './RangeSlider.vue'
 import type { GenerationParams } from '../types'
-import type { LatLng, RouteGenerationInput } from '../types/ors'
+import type { LatLng, NumberRange, RouteGenerationInput } from '../types/ors'
 
 const { t } = useI18n()
 
@@ -164,6 +164,36 @@ function onSubmit(): void {
 
 // Exposé au parent (page) pour qu'il puisse trigger le submit depuis le footer.
 defineExpose({ submit: onSubmit })
+
+/**
+ * Applique une valeur saisie au clavier sur une borne de plage : snap au pas,
+ * clamp aux bornes absolues, et empêche le croisement min/max. Resynchronise
+ * le champ même quand la valeur retenue est identique (saisie hors bornes).
+ */
+function commitRangeEdge(
+  range: NumberRange,
+  edge: 'min' | 'max',
+  bounds: { min: number; max: number; step: number },
+  decimals: number,
+  e: Event,
+): void {
+  const el = e.target as HTMLInputElement
+  const raw = el.valueAsNumber
+  if (Number.isNaN(raw)) {
+    el.value = range[edge].toFixed(decimals)
+    return
+  }
+  const stepped = Math.round(raw / bounds.step) * bounds.step
+  const clamped = Math.min(Math.max(stepped, bounds.min), bounds.max)
+  range[edge] =
+    edge === 'min' ? Math.min(clamped, range.max) : Math.max(clamped, range.min)
+  el.value = range[edge].toFixed(decimals)
+}
+
+/** Entrée → on quitte le champ (déclenche le commit) sans soumettre le formulaire. */
+function blurTarget(e: Event): void {
+  ;(e.target as HTMLInputElement).blur()
+}
 
 const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'montagneux']
 </script>
@@ -337,9 +367,31 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           <span class="text-label uppercase text-ink-500">{{ t('control.distance') }}</span>
         </label>
         <p v-if="form.useDistance" class="flex items-baseline gap-1">
-          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.min.toFixed(1) }}</span>
+          <input
+            type="number"
+            class="range-num text-stat-sm tabular-nums"
+            :value="form.distanceKm.min.toFixed(1)"
+            :min="DISTANCE_BOUNDS_KM.min"
+            :max="DISTANCE_BOUNDS_KM.max"
+            :step="DISTANCE_BOUNDS_KM.step"
+            inputmode="decimal"
+            :aria-label="`${t('control.distance')} ${t('control.min')}`"
+            @change="commitRangeEdge(form.distanceKm, 'min', DISTANCE_BOUNDS_KM, 1, $event)"
+            @keydown.enter.prevent="blurTarget"
+          />
           <span class="text-unit text-ink-500">–</span>
-          <span class="text-stat-sm tabular-nums">{{ form.distanceKm.max.toFixed(1) }}</span>
+          <input
+            type="number"
+            class="range-num text-stat-sm tabular-nums"
+            :value="form.distanceKm.max.toFixed(1)"
+            :min="DISTANCE_BOUNDS_KM.min"
+            :max="DISTANCE_BOUNDS_KM.max"
+            :step="DISTANCE_BOUNDS_KM.step"
+            inputmode="decimal"
+            :aria-label="`${t('control.distance')} ${t('control.max')}`"
+            @change="commitRangeEdge(form.distanceKm, 'max', DISTANCE_BOUNDS_KM, 1, $event)"
+            @keydown.enter.prevent="blurTarget"
+          />
           <span class="text-unit text-ink-500">km</span>
         </p>
         <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedF') }}</span>
@@ -368,9 +420,31 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           <span class="text-label uppercase text-ink-500">{{ t('control.elevation') }}</span>
         </label>
         <p v-if="form.useElevation" class="flex items-baseline gap-1">
-          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.min }}</span>
+          <input
+            type="number"
+            class="range-num text-stat-sm tabular-nums"
+            :value="form.elevationGainM.min"
+            :min="ELEVATION_BOUNDS_M.min"
+            :max="ELEVATION_BOUNDS_M.max"
+            :step="ELEVATION_BOUNDS_M.step"
+            inputmode="numeric"
+            :aria-label="`${t('control.elevation')} ${t('control.min')}`"
+            @change="commitRangeEdge(form.elevationGainM, 'min', ELEVATION_BOUNDS_M, 0, $event)"
+            @keydown.enter.prevent="blurTarget"
+          />
           <span class="text-unit text-ink-500">–</span>
-          <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.max }}</span>
+          <input
+            type="number"
+            class="range-num text-stat-sm tabular-nums"
+            :value="form.elevationGainM.max"
+            :min="ELEVATION_BOUNDS_M.min"
+            :max="ELEVATION_BOUNDS_M.max"
+            :step="ELEVATION_BOUNDS_M.step"
+            inputmode="numeric"
+            :aria-label="`${t('control.elevation')} ${t('control.max')}`"
+            @change="commitRangeEdge(form.elevationGainM, 'max', ELEVATION_BOUNDS_M, 0, $event)"
+            @keydown.enter.prevent="blurTarget"
+          />
           <span class="text-unit text-ink-500">m</span>
         </p>
         <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedM') }}</span>
@@ -447,6 +521,34 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 </template>
 
 <style scoped>
+/* Valeurs de plage éditables : ressemblent au texte stat, deviennent un champ
+   au survol / focus. content-box pour que `width: 4ch` = largeur du contenu. */
+.range-num {
+  box-sizing: content-box;
+  width: 4ch;
+  padding: 1px 4px;
+  text-align: right;
+  color: inherit;
+  background: transparent;
+  border-radius: 8px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.range-num:hover {
+  background: theme('colors.cream.200');
+}
+.range-num:focus {
+  outline: none;
+  background: theme('colors.cream.100');
+  box-shadow: 0 0 0 2px theme('colors.olive.900');
+}
+.range-num::-webkit-outer-spin-button,
+.range-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 input[type='range'] {
   height: 6px;
   border-radius: 999px;
