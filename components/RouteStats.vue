@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PACE_MIN_PER_KM } from '../config'
 import { useCountUp } from '../composables/useCountUp'
 import type { AnalyzedRoute } from '../types'
 
-const props = defineProps<{ route: AnalyzedRoute }>()
+const props = defineProps<{
+  route: AnalyzedRoute
+  /** Allure de course en min/km, pour le temps estimé. */
+  pace: number
+}>()
 
 // Valeurs animées (count-up) — réagissent au changement de parcours.
 const distanceKm = useCountUp(() => props.route.distanceM / 1000)
 const gainM = useCountUp(() => props.route.elevationGainM)
 const lossM = useCountUp(() => props.route.elevationLossM)
-const durationMin = useCountUp(() => (props.route.distanceM / 1000) * PACE_MIN_PER_KM)
+const durationMin = useCountUp(() => (props.route.distanceM / 1000) * props.pace)
 
 const hh = computed(() => Math.floor(durationMin.value / 60))
 const mm = computed(() => Math.round(durationMin.value % 60))
@@ -20,8 +23,8 @@ const timeLabel = computed(() =>
 </script>
 
 <template>
-  <!-- Rangée de 4 stats : gros chiffre animé + unité + label -->
-  <div class="grid grid-cols-4 gap-2">
+  <!-- 2 colonnes sur mobile (évite le chevauchement des gros chiffres), 4 sur large -->
+  <div class="grid grid-cols-2 gap-x-2 gap-y-4 sm:grid-cols-4">
     <div class="flex flex-col items-start">
       <p class="flex items-baseline gap-1">
         <span class="text-stat tabular-nums">{{ distanceKm.toFixed(2) }}</span>

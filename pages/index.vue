@@ -29,10 +29,13 @@ import TerrainBreakdown from '../components/TerrainBreakdown.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
 import { useRouteGenerator } from '../composables/useRouteGenerator'
-import { historyEntryToRoute, useRouteHistory } from '../composables/useRouteHistory'
+import { useRouteHistory, historyEntryToRoute } from '../composables/useRouteHistory'
+import { useRunnerPace } from '../composables/useRunnerPace'
 import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/share-url'
 import { reverseRoute } from '../utils/route-ops'
 import { climbConcentration } from '../utils/climbs'
+import { computeDifficulty } from '../utils/difficulty'
+import { formatPace } from '../utils/pace'
 import type { AnalyzedRoute, GenerationParams, RouteCandidate, TerrainStats } from '../types'
 import type { LatLng } from '../types/ors'
 
@@ -46,6 +49,7 @@ let abort: AbortController | null = null
 
 const pipeline = useRoutePipeline()
 const history = useRouteHistory()
+const { pace, cycle: cyclePace } = useRunnerPace()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
 /** Validité du formulaire (départ défini + au moins distance ou dénivelé actif). */
@@ -126,6 +130,17 @@ const baseRoute = computed<AnalyzedRoute | null>(() => {
 const selectedRoute = computed<AnalyzedRoute | null>(() =>
   baseRoute.value && reversed.value ? reverseRoute(baseRoute.value) : baseRoute.value,
 )
+
+/** Difficulté estimée du parcours affiché (distance + D+ + technicité). */
+const difficulty = computed(() => {
+  const r = selectedRoute.value
+  if (!r) return null
+  return computeDifficulty(
+    r.distanceM,
+    r.elevationGainM,
+    r.terrainFallback ? 0 : r.terrain.single,
+  )
+})
 
 const loading = computed(
   () =>
@@ -493,22 +508,40 @@ watch(activeTab, (t) => {
           class="space-y-6 pt-1"
         >
           <div class="animate-reveal">
-            <RouteStats :route="selectedRoute" />
+            <RouteStats :route="selectedRoute" :pace="pace" />
           </div>
 
-          <!-- Pills difficulté / rythme + inversion du sens -->
+          <!-- Pills difficulté (calculée) / rythme (réglable) + inversion du sens -->
           <div
             class="animate-reveal flex flex-wrap items-center gap-2"
             style="animation-delay: 60ms"
           >
           <span class="pill-active">
-            Modéré
+            {{ difficulty?.level }}
             <span class="text-[10px] uppercase opacity-80">Difficulté</span>
           </span>
-          <span class="pill-muted">
-            6 min/km
+          <button
+            type="button"
+            class="pill-muted"
+            aria-label="Changer l'allure de course"
+            @click="cyclePace"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="7 10 12 5 17 10" />
+              <polyline points="7 14 12 19 17 14" />
+            </svg>
+            {{ formatPace(pace) }} min/km
             <span class="text-[10px] uppercase opacity-60">Rythme</span>
-          </span>
+          </button>
           <button
             type="button"
             :class="reversed ? 'pill-active' : 'pill-muted'"
@@ -595,6 +628,7 @@ watch(activeTab, (t) => {
           <RouteHistory
             :entries="history.list.value"
             :selectedId="viewedHistoryId"
+            :pace="pace"
             @select="onSelectHistory"
             @remove="onRemoveHistory"
             @clear="onClearHistory"

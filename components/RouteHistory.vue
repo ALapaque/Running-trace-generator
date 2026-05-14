@@ -3,12 +3,13 @@
  * Onglet « Historique » : liste des parcours générés récemment (localStorage).
  * Cliquer une entrée la réaffiche sur la carte sans reconsommer de quota ORS.
  */
-import { PACE_MIN_PER_KM } from '../config'
 import type { RouteHistoryEntry } from '../types'
 
 const props = defineProps<{
   entries: RouteHistoryEntry[]
   selectedId: string | null
+  /** Allure de course en min/km, pour la durée estimée. */
+  pace: number
 }>()
 
 const emit = defineEmits<{
@@ -27,13 +28,11 @@ function fmtDate(ts: number): string {
 }
 
 function fmtDuration(distanceM: number): string {
-  const min = (distanceM / 1000) * PACE_MIN_PER_KM
+  const min = (distanceM / 1000) * props.pace
   const h = Math.floor(min / 60)
   const m = Math.round(min % 60)
   return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}m`
 }
-
-void props
 </script>
 
 <template>
