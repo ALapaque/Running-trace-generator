@@ -122,6 +122,20 @@ export const NOMINATIM_FETCH_TIMEOUT_MS = 10_000
 export const OVERPASS_CIRCUIT_THRESHOLD = 2
 export const OVERPASS_CIRCUIT_COOLDOWN_MS = 60_000
 
+/**
+ * BRouter — re-routage trail le long des sentiers (mode trail uniquement).
+ * Chaque boucle générée par ORS est ré-échantillonnée en N waypoints puis
+ * re-routée par BRouter via le proxy serverless `/api/brouter/route`, qui suit
+ * nativement les bons sentiers (pondération OSM surface/tracktype).
+ */
+export const BROUTER_WAYPOINTS_PER_LOOP = 7
+/** Timeout client de l'appel à `/api/brouter/route` (couvre amont + miroir). */
+export const BROUTER_FETCH_TIMEOUT_MS = 24_000
+/** Concurrence max sur le re-routage BRouter (fair-use brouter.de). */
+export const BROUTER_MAX_CONCURRENT = 2
+export const BROUTER_CIRCUIT_THRESHOLD = 2
+export const BROUTER_CIRCUIT_COOLDOWN_MS = 60_000
+
 /** TTL du cache Overpass dans localStorage, en millisecondes (24h). */
 export const OVERPASS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 

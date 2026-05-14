@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reverseRoute } from '../utils/route-ops'
+import { reverseRoute, sampleWaypoints } from '../utils/route-ops'
 import { haversineM } from '../utils/geo'
 import type { AnalyzedRoute } from '../types'
 import type { RoutePoint } from '../types/ors'
@@ -67,5 +67,34 @@ describe('reverseRoute', () => {
     const r = reverseRoute(original)
     expect(r.points[r.points.length - 1]!.distance).toBeCloseTo(original.distanceM, 3)
     expect(r.terrain).toEqual(original.terrain)
+  })
+})
+
+describe('sampleWaypoints', () => {
+  it('retourne le départ + `count` waypoints intermédiaires', () => {
+    const pts = makeRoute().points
+    const wps = sampleWaypoints(pts, 2)
+    expect(wps).toHaveLength(3) // départ + 2
+    expect(wps[0]).toEqual({ lat: pts[0]!.lat, lng: pts[0]!.lng })
+    // Waypoints = uniquement {lat, lng} (pas d'ele/distance).
+    for (const w of wps) expect(Object.keys(w).sort()).toEqual(['lat', 'lng'])
+  })
+
+  it('ferme la boucle quand closeLoop est vrai', () => {
+    const pts = makeRoute().points
+    const wps = sampleWaypoints(pts, 2, true)
+    expect(wps).toHaveLength(4) // départ + 2 + départ
+    expect(wps[wps.length - 1]).toEqual(wps[0])
+  })
+
+  it('gère un parcours dégénéré (2 points)', () => {
+    const pts: RoutePoint[] = [
+      { lat: 50, lng: 4, ele: 100, distance: 0 },
+      { lat: 50.001, lng: 4, ele: 100, distance: 111 },
+    ]
+    const wps = sampleWaypoints(pts, 6, true)
+    // Les indices clampent à pts.length - 1 ; aucune entrée undefined.
+    expect(wps.every((w) => typeof w.lat === 'number' && typeof w.lng === 'number')).toBe(true)
+    expect(wps[wps.length - 1]).toEqual(wps[0])
   })
 })

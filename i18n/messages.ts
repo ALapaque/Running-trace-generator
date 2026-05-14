@@ -151,6 +151,8 @@ export const fr = {
     quotaPartial: 'Quota ORS partiellement consommé — les candidats restants ont été utilisés.',
     toleranceRelaxed:
       'Aucun candidat dans la plage de distance demandée — les meilleurs hors gabarit sont retournés.',
+    brouterUnavailable:
+      'Optimisation sentier indisponible — parcours standards affichés.',
   },
 
   errors: {
@@ -319,6 +321,7 @@ export const en: typeof fr = {
     quotaPartial: 'ORS quota partially used — the remaining candidates were used.',
     toleranceRelaxed:
       'No candidate within the requested distance range — the closest off-range ones are returned.',
+    brouterUnavailable: 'Trail optimization unavailable — showing standard routes.',
   },
 
   errors: {

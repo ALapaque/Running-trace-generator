@@ -6,7 +6,29 @@ import { haversineM } from './geo'
 import { climbConcentration } from './climbs'
 import { computeElevationGainLoss } from '../composables/useRouteGenerator'
 import type { AnalyzedRoute } from '../types'
-import type { RoutePoint } from '../types/ors'
+import type { LatLng, RoutePoint } from '../types/ors'
+
+/**
+ * Échantillonne `count` waypoints intermédiaires régulièrement espacés (par
+ * index) le long d'un parcours, précédés du point de départ. Avec `closeLoop`,
+ * le départ est aussi répété en fin pour fermer la boucle.
+ *
+ * Réutilisé par l'édition manuelle du tracé et le re-routage trail BRouter.
+ */
+export function sampleWaypoints(
+  points: RoutePoint[],
+  count = 6,
+  closeLoop = false,
+): LatLng[] {
+  const start: LatLng = { lat: points[0]!.lat, lng: points[0]!.lng }
+  const wps: LatLng[] = [start]
+  for (let i = 1; i <= count; i++) {
+    const idx = Math.min(points.length - 1, Math.floor((points.length / (count + 1)) * i))
+    wps.push({ lat: points[idx]!.lat, lng: points[idx]!.lng })
+  }
+  if (closeLoop) wps.push(start)
+  return wps
+}
 
 /**
  * Inverse le sens d'un parcours :
