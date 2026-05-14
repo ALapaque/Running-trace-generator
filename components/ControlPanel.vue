@@ -218,7 +218,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             'flex flex-col items-start gap-1.5 rounded-card border px-4 py-3 text-left transition active:scale-[0.98]',
             form.mode === 'running'
               ? 'border-olive-900 bg-olive-900 text-cream-50 shadow-card'
-              : 'border-cream-200 bg-cream-100 text-ink-900 hover:bg-cream-200',
+              : 'border-cream-300 bg-cream-100 text-ink-900 hover:bg-cream-200',
           ]"
           @click="form.mode = 'running'"
         >
@@ -246,7 +246,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             'flex flex-col items-start gap-1.5 rounded-card border px-4 py-3 text-left transition active:scale-[0.98]',
             form.mode === 'trail'
               ? 'border-olive-900 bg-olive-900 text-cream-50 shadow-card'
-              : 'border-cream-200 bg-cream-100 text-ink-900 hover:bg-cream-200',
+              : 'border-cream-300 bg-cream-100 text-ink-900 hover:bg-cream-200',
           ]"
           @click="form.mode = 'trail'"
         >
@@ -275,7 +275,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <div class="mt-1 flex gap-2">
         <div class="relative flex-1">
           <svg
-            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -292,13 +292,13 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             v-model="geocodeQuery"
             type="text"
             :placeholder="t('control.searchPlaceholder')"
-            class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
+            class="w-full rounded-pill border border-cream-300 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
             autocomplete="off"
           />
         </div>
         <button
           type="button"
-          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-300 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
           style="min-width: 44px; min-height: 44px;"
           :aria-label="geo.loading.value ? t('control.locating') : t('control.useLocation')"
           :aria-busy="geo.loading.value || undefined"
@@ -336,7 +336,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       </div>
       <ul
         v-if="geocodeResults.length"
-        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-200 bg-cream-100 text-sm shadow-card"
+        class="mt-2 max-h-48 overflow-y-auto rounded-card border border-cream-300 bg-cream-100 text-sm shadow-card"
         role="listbox"
       >
         <li
@@ -352,7 +352,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-if="geo.error.value" class="mt-2 text-xs text-terracotta-600" role="alert">
         {{ geo.error.value }}
       </p>
-      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">{{ t('control.searching') }}</p>
+      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-500">{{ t('control.searching') }}</p>
     </section>
 
     <!-- Distance (plage, optionnelle) -->
@@ -366,7 +366,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           </span>
           <span class="text-label uppercase text-ink-500">{{ t('control.distance') }}</span>
         </label>
-        <p v-if="form.useDistance" class="flex items-baseline gap-1">
+        <p v-if="form.useDistance" class="flex items-center gap-1">
           <input
             type="number"
             class="range-num text-stat-sm tabular-nums"
@@ -394,7 +394,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           />
           <span class="text-unit text-ink-500">km</span>
         </p>
-        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedF') }}</span>
+        <span v-else class="text-xs text-ink-500">{{ t('control.unconstrainedF') }}</span>
       </div>
       <RangeSlider
         v-show="form.useDistance"
@@ -419,7 +419,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           </span>
           <span class="text-label uppercase text-ink-500">{{ t('control.elevation') }}</span>
         </label>
-        <p v-if="form.useElevation" class="flex items-baseline gap-1">
+        <p v-if="form.useElevation" class="flex items-center gap-1">
           <input
             type="number"
             class="range-num text-stat-sm tabular-nums"
@@ -447,7 +447,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           />
           <span class="text-unit text-ink-500">m</span>
         </p>
-        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedM') }}</span>
+        <span v-else class="text-xs text-ink-500">{{ t('control.unconstrainedM') }}</span>
       </div>
       <RangeSlider
         v-show="form.useElevation"
@@ -526,7 +526,8 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 .range-num {
   box-sizing: content-box;
   width: 4ch;
-  padding: 1px 4px;
+  min-height: 44px;
+  padding: 1px 6px;
   text-align: right;
   color: inherit;
   background: transparent;

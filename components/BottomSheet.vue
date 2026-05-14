@@ -232,7 +232,7 @@ function onScrimClick(): void {
     <!-- Footer optionnel (toujours visible, sous la zone scroll) -->
     <div
       v-if="$slots.footer"
-      class="shrink-0 border-t border-cream-200 bg-cream-50 px-4 pt-3"
+      class="shrink-0 border-t border-cream-300 bg-cream-50 px-4 pt-3"
       style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
     >
       <slot name="footer" />

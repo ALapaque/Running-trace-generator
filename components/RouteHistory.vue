@@ -63,7 +63,7 @@ function fmtDuration(distanceM: number): string {
             'flex items-center gap-3 border p-3 transition',
             selectedId === entry.id
               ? 'rounded-t-card border-olive-900 bg-olive-50'
-              : 'rounded-card border-cream-200 bg-cream-100 hover:border-cream-300',
+              : 'rounded-card border-cream-300 bg-cream-100 hover:border-ink-300',
           ]"
         >
           <button
@@ -89,7 +89,7 @@ function fmtDuration(distanceM: number): string {
           </button>
           <button
             type="button"
-            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-ink-400 transition hover:bg-cream-200 hover:text-terracotta-600"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-ink-500 transition hover:bg-cream-200 hover:text-terracotta-600"
             :aria-label="t('history.remove', { date: fmtDate(entry.ts) })"
             @click="emit('remove', entry.id)"
           >

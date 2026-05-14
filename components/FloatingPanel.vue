@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
 
 <template>
   <aside
-    class="animate-panel-in fixed z-40 flex flex-col overflow-hidden rounded-card bg-cream-100 shadow-float ring-1 ring-cream-200"
+    class="animate-panel-in fixed z-40 flex flex-col overflow-hidden rounded-card bg-cream-100 shadow-float ring-1 ring-cream-300"
     :style="{
       left: `${x}px`,
       top: `${y}px`,
@@ -101,7 +101,7 @@ onBeforeUnmount(() => {
   >
     <!-- Barre de préhension (drag) -->
     <div
-      class="flex shrink-0 select-none items-center gap-2 border-b border-cream-200 px-4 py-2.5"
+      class="flex shrink-0 select-none items-center gap-2 border-b border-cream-300 px-4 py-2.5"
       :class="dragging ? 'cursor-grabbing' : 'cursor-grab'"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
@@ -110,7 +110,7 @@ onBeforeUnmount(() => {
     >
       <svg
         viewBox="0 0 24 24"
-        class="h-4 w-4 text-ink-400"
+        class="h-4 w-4 text-ink-500"
         fill="currentColor"
         aria-hidden="true"
       >
@@ -124,7 +124,7 @@ onBeforeUnmount(() => {
       <span class="text-sm font-bold text-ink-900">RunGen</span>
       <button
         type="button"
-        class="ml-auto flex h-9 w-9 items-center justify-center rounded-pill text-ink-500 transition hover:bg-cream-200"
+        class="ml-auto flex h-11 w-11 items-center justify-center rounded-pill text-ink-500 transition hover:bg-cream-200"
         :aria-label="collapsed ? t('panel.expand') : t('panel.collapse')"
         :aria-expanded="!collapsed"
         @click="collapsed = !collapsed"
@@ -159,7 +159,7 @@ onBeforeUnmount(() => {
       <!-- Footer optionnel -->
       <div
         v-if="$slots.footer"
-        class="shrink-0 border-t border-cream-200 bg-cream-100 px-4 py-3"
+        class="shrink-0 border-t border-cream-300 bg-cream-100 px-4 py-3"
       >
         <slot name="footer" />
       </div>

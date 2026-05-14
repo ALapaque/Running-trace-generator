@@ -50,7 +50,7 @@ const difficulty = computed(() =>
     <div class="animate-reveal flex flex-wrap items-center gap-2" style="animation-delay: 60ms">
       <span class="pill-active">
         {{ t(`difficulty.${difficulty.level}`) }}
-        <span class="text-[10px] uppercase opacity-80">{{ t('details.difficulty') }}</span>
+        <span class="text-[11px] uppercase opacity-80">{{ t('details.difficulty') }}</span>
       </span>
       <button
         type="button"
@@ -72,7 +72,7 @@ const difficulty = computed(() =>
           <polyline points="7 14 12 19 17 14" />
         </svg>
         {{ formatPace(pace) }} {{ t('units.minPerKm') }}
-        <span class="text-[10px] uppercase opacity-60">{{ t('details.pace') }}</span>
+        <span class="text-[11px] uppercase opacity-60">{{ t('details.pace') }}</span>
       </button>
       <button
         type="button"

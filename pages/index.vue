@@ -19,6 +19,7 @@ import ExportMenu from '../components/ExportMenu.vue'
 import FloatingButton from '../components/FloatingButton.vue'
 import FloatingPanel from '../components/FloatingPanel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
+import MapLegend from '../components/MapLegend.vue'
 import MapView from '../components/MapView.vue'
 import RouteAlternatives from '../components/RouteAlternatives.vue'
 import RouteDetail from '../components/RouteDetail.vue'
@@ -459,6 +460,16 @@ watch(activeTab, (t) => {
       </div>
     </div>
 
+    <!-- Légende du tracé (bas-gauche) — clé des couleurs de la polyline.
+         Suit la même hauteur que le cluster de FABs (au-dessus du sheet). -->
+    <div
+      v-if="selectedRoute && !selectedRoute.terrainFallback && !editMode"
+      class="pointer-events-none absolute left-3 z-20 flex"
+      :style="fabClusterStyle"
+    >
+      <MapLegend class="pointer-events-auto" :terrain="selectedRoute.terrain" />
+    </div>
+
     <!-- Loading overlay (toast en haut) -->
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />
 
@@ -469,7 +480,7 @@ watch(activeTab, (t) => {
       style="padding-top: max(0.75rem, env(safe-area-inset-top));"
     >
       <div
-        class="pointer-events-auto flex max-w-[92vw] items-center gap-3 rounded-pill bg-cream-100 px-4 py-2.5 shadow-float ring-1 ring-cream-200"
+        class="pointer-events-auto flex max-w-[92vw] items-center gap-3 rounded-pill bg-cream-100 px-4 py-2.5 shadow-float ring-1 ring-cream-300"
       >
         <svg
           v-if="editRerouting"

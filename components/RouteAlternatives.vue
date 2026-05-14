@@ -35,7 +35,7 @@ function fmtKm(m: number): string {
             'flex w-full items-center gap-3 border p-3 text-left transition',
             selectedId === r.id
               ? 'rounded-t-card border-olive-900 bg-olive-50'
-              : 'rounded-card border-cream-200 bg-cream-100 hover:border-cream-300',
+              : 'rounded-card border-cream-300 bg-cream-100 hover:border-ink-300',
           ]"
           @click="emit('select', r.id)"
         >
@@ -62,7 +62,7 @@ function fmtKm(m: number): string {
               · {{ t('terrain.single') }} {{ Math.round(r.terrain.single * 100) }}%
             </p>
           </div>
-          <span class="font-mono text-[11px] text-ink-400">{{ t('alternatives.score') }} {{ r.score.toFixed(2) }}</span>
+          <span class="font-mono text-xs text-ink-500">{{ t('alternatives.score') }} {{ r.score.toFixed(2) }}</span>
         </button>
 
         <!-- Détail inline : s'ouvre sous l'alternative sélectionnée -->

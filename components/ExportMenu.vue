@@ -142,7 +142,7 @@ async function onCopyLink(): Promise<void> {
            desktop (le menu passe en haut-gauche, la sidebar prend la droite). -->
       <div
         v-if="open"
-        class="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-card border border-cream-200 bg-cream-100 shadow-float lg:left-0 lg:right-auto"
+        class="absolute right-0 z-30 mt-2 w-60 overflow-hidden rounded-card border border-cream-300 bg-cream-100 shadow-float lg:left-0 lg:right-auto"
         role="menu"
       >
         <button
@@ -182,7 +182,7 @@ async function onCopyLink(): Promise<void> {
           </span>
         </button>
 
-        <div class="border-t border-cream-200" />
+        <div class="border-t border-cream-300" />
 
         <button
           type="button"
@@ -240,7 +240,7 @@ async function onCopyLink(): Promise<void> {
           </span>
         </button>
 
-        <p v-if="hint" class="border-t border-cream-200 px-4 py-2 text-xs text-ink-500 break-all">
+        <p v-if="hint" class="border-t border-cream-300 px-4 py-2 text-xs text-ink-500 break-all">
           {{ hint }}
         </p>
       </div>
