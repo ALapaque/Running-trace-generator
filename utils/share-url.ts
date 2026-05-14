@@ -1,7 +1,7 @@
 /**
  * Encodage / décodage des paramètres de génération dans le hash de l'URL.
  *
- * On partage les *paramètres* (point de départ, plages, terrain…), pas la
+ * On partage les *paramètres* (point de départ, plages, mode…), pas la
  * géométrie : un lien reste court et robuste. Le destinataire relance une
  * génération avec les mêmes contraintes.
  *
@@ -15,7 +15,8 @@ import {
   RESULTS_COUNT_OPTIONS,
 } from '../config'
 
-const VERSION = 1
+// v2 : `terrain` + `preferForest` remplacés par `mode` (running/trail).
+const VERSION = 2
 const HASH_KEY = 'g'
 
 function base64UrlEncode(str: string): string {
@@ -37,8 +38,7 @@ export function encodeParams(params: GenerationParams): string {
     e: params.elevationGainM
       ? [params.elevationGainM.min, params.elevationGainM.max]
       : null,
-    t: params.terrain,
-    f: params.preferForest ? 1 : 0,
+    m: params.mode,
     h: params.hills,
     n: params.resultsCount,
   }
@@ -99,9 +99,9 @@ function sanitize(p: Record<string, unknown>): GenerationParams | null {
   // Au moins un critère doit être présent et valide.
   if (!distanceKm && !elevationGainM) return null
 
-  const terrain = ['route', 'chemin_large', 'single', 'mixte'].includes(p.t as string)
-    ? (p.t as GenerationParams['terrain'])
-    : 'mixte'
+  const mode = ['running', 'trail'].includes(p.m as string)
+    ? (p.m as GenerationParams['mode'])
+    : 'running'
   const hills = ['plat', 'vallonné', 'montagneux'].includes(p.h as string)
     ? (p.h as GenerationParams['hills'])
     : 'vallonné'
@@ -115,8 +115,7 @@ function sanitize(p: Record<string, unknown>): GenerationParams | null {
     start: { lat, lng },
     distanceKm,
     elevationGainM,
-    terrain,
-    preferForest: p.f === 1,
+    mode,
     hills,
     resultsCount,
   }

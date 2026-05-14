@@ -1,6 +1,11 @@
 /** Types liés à OpenRouteService. */
 
-export type TerrainPreference = 'route' | 'chemin_large' | 'single' | 'mixte'
+/**
+ * Type de course :
+ *  - `running` : bitume / routes — profil ORS `foot-walking`.
+ *  - `trail`   : sentiers & forêt — profil ORS `foot-hiking` + weighting `green`.
+ */
+export type RouteMode = 'running' | 'trail'
 export type HillPreference = 'plat' | 'vallonné' | 'montagneux'
 
 export interface LatLng {
@@ -20,8 +25,8 @@ export interface RouteGenerationInput {
   distanceKm: NumberRange | null
   /** Plage de dénivelé positif acceptée, en mètres. `null` = non contrainte. */
   elevationGainM: NumberRange | null
-  terrain: TerrainPreference
-  preferForest: boolean
+  /** Running (route) ou Trail (sentiers & forêt). Pilote profil ORS + scoring. */
+  mode: RouteMode
   hills: HillPreference
 }
 
@@ -36,6 +41,12 @@ export interface OrsDirectionsRequest {
       length: number
       points: number
       seed: number
+    }
+    /** Biais vers les espaces verts (0–1), utilisé en mode trail. */
+    profile_params?: {
+      weightings: {
+        green: number
+      }
     }
   }
 }

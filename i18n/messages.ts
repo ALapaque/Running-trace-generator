@@ -60,8 +60,6 @@ export const fr = {
     unconstrainedF: 'Non contrainte',
     unconstrainedM: 'Non contraint',
     atLeastOne: 'Active au moins la distance ou le dénivelé pour générer un parcours.',
-    pathType: 'Type de chemin',
-    preferForest: 'Privilégier les portions en forêt',
     hillType: 'Type de côte',
     alternativesCount: 'Alternatives à proposer',
     quotaWarning:
@@ -70,11 +68,12 @@ export const fr = {
     generating: 'Génération en cours…',
   },
 
-  terrainPref: {
-    route: 'Route',
-    chemin_large: 'Chemin large',
-    single: 'Single track',
-    mixte: 'Mixte',
+  mode: {
+    label: 'Type de course',
+    running: 'Running',
+    runningSub: 'Routes & bitume',
+    trail: 'Trail',
+    trailSub: 'Sentiers & forêt',
   },
   hillPref: {
     plat: 'Plat',
@@ -224,8 +223,6 @@ export const en: typeof fr = {
     unconstrainedF: 'Unconstrained',
     unconstrainedM: 'Unconstrained',
     atLeastOne: 'Enable at least distance or elevation to generate a route.',
-    pathType: 'Path type',
-    preferForest: 'Prefer forest sections',
     hillType: 'Hill profile',
     alternativesCount: 'Alternatives to propose',
     quotaWarning: 'More alternatives = more ORS requests used (~13 per generation).',
@@ -233,11 +230,12 @@ export const en: typeof fr = {
     generating: 'Generating…',
   },
 
-  terrainPref: {
-    route: 'Road',
-    chemin_large: 'Wide track',
-    single: 'Single track',
-    mixte: 'Mixed',
+  mode: {
+    label: 'Run type',
+    running: 'Running',
+    runningSub: 'Roads & pavement',
+    trail: 'Trail',
+    trailSub: 'Paths & forest',
   },
   hillPref: {
     plat: 'Flat',

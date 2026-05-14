@@ -6,8 +6,7 @@ const baseParams: GenerationParams = {
   start: { lat: 50.4108, lng: 4.4446 },
   distanceKm: { min: 8, max: 12 },
   elevationGainM: { min: 100, max: 300 },
-  terrain: 'chemin_large',
-  preferForest: true,
+  mode: 'trail',
   hills: 'vallonné',
   resultsCount: 5,
 }
@@ -21,8 +20,7 @@ describe('encodeParams / decodeParamsFromHash', () => {
     expect(decoded!.start.lng).toBeCloseTo(4.4446, 4)
     expect(decoded!.distanceKm).toEqual({ min: 8, max: 12 })
     expect(decoded!.elevationGainM).toEqual({ min: 100, max: 300 })
-    expect(decoded!.terrain).toBe('chemin_large')
-    expect(decoded!.preferForest).toBe(true)
+    expect(decoded!.mode).toBe('trail')
     expect(decoded!.hills).toBe('vallonné')
     expect(decoded!.resultsCount).toBe(5)
   })

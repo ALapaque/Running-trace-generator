@@ -61,14 +61,13 @@ describe('useScoring.scoreOne', () => {
     start: { lat: 50, lng: 4 },
     distanceKm: { min: 9, max: 11 },
     elevationGainM: { min: 80, max: 120 },
-    terrain: 'single',
-    preferForest: false,
+    mode: 'running',
     hills: 'plat',
   }
 
   it('produit un score bas quand distance et D+ matchent et terrain idéal', () => {
     const candidate = makeFlatCandidate(10_000)
-    const terrain: TerrainStats = { ...baseTerrain, single: 0.9, unknown: 0.1 }
+    const terrain: TerrainStats = { ...baseTerrain, route: 0.9, unknown: 0.1 }
     const result = scoreOne(
       { candidate: { ...candidate, elevationGainM: 100 }, terrain, segments: [], fallback: false },
       request,
@@ -86,10 +85,11 @@ describe('useScoring.scoreOne', () => {
     expect(result.scoreBreakdown.distance).toBeGreaterThan(0.2)
   })
 
-  it("pénalise un parcours dont le terrain ne correspond pas à la préférence", () => {
+  it("pénalise un parcours dont le terrain ne correspond pas au mode", () => {
     const candidate = makeFlatCandidate(10_000)
-    const terrainBad: TerrainStats = { ...baseTerrain, route: 1, unknown: 0 }
-    const terrainGood: TerrainStats = { ...baseTerrain, single: 1, unknown: 0 }
+    // Mode running : la route est idéale, le single track ne l'est pas.
+    const terrainBad: TerrainStats = { ...baseTerrain, single: 1, unknown: 0 }
+    const terrainGood: TerrainStats = { ...baseTerrain, route: 1, unknown: 0 }
     const bad = scoreOne(
       { candidate, terrain: terrainBad, segments: [], fallback: false },
       request,
@@ -112,19 +112,19 @@ describe('useScoring.scoreOne', () => {
     expect(result.scoreBreakdown.forest).toBe(0)
   })
 
-  it('applique la pénalité forêt seulement quand le toggle est actif', () => {
+  it('applique la pénalité forêt uniquement en mode trail', () => {
     const candidate = makeFlatCandidate(10_000)
     const terrain = { ...baseTerrain, forest: 0, single: 1, unknown: 0 }
-    const noForest = scoreOne(
+    const running = scoreOne(
       { candidate, terrain, segments: [], fallback: false },
-      { ...request, preferForest: false },
+      { ...request, mode: 'running' },
     )
-    const withForest = scoreOne(
+    const trail = scoreOne(
       { candidate, terrain, segments: [], fallback: false },
-      { ...request, preferForest: true },
+      { ...request, mode: 'trail' },
     )
-    expect(noForest.scoreBreakdown.forest).toBe(0)
-    expect(withForest.scoreBreakdown.forest).toBeGreaterThan(0)
+    expect(running.scoreBreakdown.forest).toBe(0)
+    expect(trail.scoreBreakdown.forest).toBeGreaterThan(0)
   })
 
   it('ignore la distance quand le critère distance est null', () => {
@@ -156,8 +156,7 @@ describe('useScoring.rank', () => {
       start: { lat: 50, lng: 4 },
       distanceKm: { min: 9, max: 11 },
       elevationGainM: { min: 80, max: 120 },
-      terrain: 'single',
-      preferForest: false,
+      mode: 'running',
       hills: 'plat',
     }
     const inputs = [

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
  * Formulaire de génération — pensé pour vivre dans la bottom sheet / sidebar.
+ * - Sélecteur Running / Trail (pilote le profil ORS + le scoring)
  * - Recherche d'adresse + géolocalisation
  * - Plages distance / D+ via sliders à deux poignées
- * - Pills pour terrain et type de côte
- * - Toggle forêt
+ * - Pills pour le type de côte
  */
 import { computed, reactive, ref, watch } from 'vue'
 import {
@@ -31,26 +31,25 @@ export interface ControlPanelSubmit extends RouteGenerationInput {
 }
 
 interface FormState {
+  mode: RouteGenerationInput['mode']
   useDistance: boolean
   distanceKm: { min: number; max: number }
   useElevation: boolean
   elevationGainM: { min: number; max: number }
-  terrain: RouteGenerationInput['terrain']
-  preferForest: boolean
   hills: RouteGenerationInput['hills']
   resultsCount: ResultsCount
 }
 
-const FORM_STORAGE_KEY = 'rungen:form:v1'
+// v2 : `terrain` + `preferForest` remplacés par `mode` (running / trail).
+const FORM_STORAGE_KEY = 'rungen:form:v2'
 
 function defaultForm(): FormState {
   return {
+    mode: 'running',
     useDistance: true,
     distanceKm: { ...DEFAULT_DISTANCE_RANGE_KM },
     useElevation: false,
     elevationGainM: { ...DEFAULT_ELEVATION_RANGE_M },
-    terrain: 'mixte',
-    preferForest: false,
     hills: 'vallonné',
     resultsCount: DEFAULT_RESULTS_COUNT,
   }
@@ -60,12 +59,11 @@ function defaultForm(): FormState {
 function formFromParams(p: GenerationParams): FormState {
   const base = defaultForm()
   return {
+    mode: p.mode,
     useDistance: p.distanceKm !== null,
     distanceKm: p.distanceKm ?? base.distanceKm,
     useElevation: p.elevationGainM !== null,
     elevationGainM: p.elevationGainM ?? base.elevationGainM,
-    terrain: p.terrain,
-    preferForest: p.preferForest,
     hills: p.hills,
     resultsCount: (p.resultsCount as ResultsCount) ?? base.resultsCount,
   }
@@ -158,8 +156,7 @@ function onSubmit(): void {
     start: props.start as LatLng,
     distanceKm: form.useDistance ? { ...form.distanceKm } : null,
     elevationGainM: form.useElevation ? { ...form.elevationGainM } : null,
-    terrain: form.terrain,
-    preferForest: form.preferForest,
+    mode: form.mode,
     hills: form.hills,
     resultsCount: form.resultsCount,
   })
@@ -168,17 +165,78 @@ function onSubmit(): void {
 // Exposé au parent (page) pour qu'il puisse trigger le submit depuis le footer.
 defineExpose({ submit: onSubmit })
 
-const terrainOptions: RouteGenerationInput['terrain'][] = [
-  'route',
-  'chemin_large',
-  'single',
-  'mixte',
-]
 const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'montagneux']
 </script>
 
 <template>
   <form class="flex flex-col gap-6" @submit.prevent="onSubmit">
+    <!-- Type de course : sélecteur héro Running / Trail.
+         Pilote le profil ORS (foot-walking vs foot-hiking + weighting green)
+         et le scoring (bitume vs sentiers + forêt). -->
+    <section>
+      <span class="text-label uppercase text-ink-500">{{ t('mode.label') }}</span>
+      <div
+        class="mt-2 grid grid-cols-2 gap-2"
+        role="radiogroup"
+        :aria-label="t('mode.label')"
+      >
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="form.mode === 'running'"
+          :class="[
+            'flex flex-col items-start gap-1.5 rounded-card border px-4 py-3 text-left transition active:scale-[0.98]',
+            form.mode === 'running'
+              ? 'border-olive-900 bg-olive-900 text-cream-50 shadow-card'
+              : 'border-cream-200 bg-cream-100 text-ink-900 hover:bg-cream-200',
+          ]"
+          @click="form.mode = 'running'"
+        >
+          <!-- Route avec marquage central -->
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 22 L9 2" />
+            <path d="M19 22 L15 2" />
+            <line x1="12" y1="5" x2="12" y2="9" />
+            <line x1="12" y1="13" x2="12" y2="17" />
+          </svg>
+          <span class="text-sm font-semibold">{{ t('mode.running') }}</span>
+          <span
+            class="text-xs"
+            :class="form.mode === 'running' ? 'text-cream-200' : 'text-ink-500'"
+          >
+            {{ t('mode.runningSub') }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="form.mode === 'trail'"
+          :class="[
+            'flex flex-col items-start gap-1.5 rounded-card border px-4 py-3 text-left transition active:scale-[0.98]',
+            form.mode === 'trail'
+              ? 'border-olive-900 bg-olive-900 text-cream-50 shadow-card'
+              : 'border-cream-200 bg-cream-100 text-ink-900 hover:bg-cream-200',
+          ]"
+          @click="form.mode = 'trail'"
+        >
+          <!-- Sapin -->
+          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2 L7 11 H17 Z" />
+            <path d="M12 8 L5 18 H19 Z" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+          </svg>
+          <span class="text-sm font-semibold">{{ t('mode.trail') }}</span>
+          <span
+            class="text-xs"
+            :class="form.mode === 'trail' ? 'text-cream-200' : 'text-ink-500'"
+          >
+            {{ t('mode.trailSub') }}
+          </span>
+        </button>
+      </div>
+    </section>
+
     <!-- Recherche adresse + ma position -->
     <section>
       <label for="address-search" class="text-label uppercase text-ink-500">
@@ -332,46 +390,6 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
     <p v-if="!form.useDistance && !form.useElevation" class="text-xs text-terracotta-600">
       {{ t('control.atLeastOne') }}
     </p>
-
-    <!-- Type de chemin -->
-    <section>
-      <span class="text-label uppercase text-ink-500">{{ t('control.pathType') }}</span>
-      <div
-        class="mt-2 flex flex-wrap gap-2"
-        role="radiogroup"
-        :aria-label="t('control.pathType')"
-      >
-        <button
-          v-for="opt in terrainOptions"
-          :key="opt"
-          type="button"
-          role="radio"
-          :aria-checked="form.terrain === opt"
-          :class="form.terrain === opt ? 'pill-active' : 'pill-muted'"
-          @click="form.terrain = opt"
-        >
-          {{ t(`terrainPref.${opt}`) }}
-        </button>
-      </div>
-    </section>
-
-    <!-- Forêt -->
-    <section>
-      <label class="flex cursor-pointer items-center justify-between gap-3 rounded-card bg-cream-100 px-4 py-3">
-        <span class="text-sm font-medium text-ink-900">{{ t('control.preferForest') }}</span>
-        <span class="relative inline-flex h-6 w-11 shrink-0 items-center">
-          <input
-            v-model="form.preferForest"
-            type="checkbox"
-            class="peer sr-only"
-          />
-          <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
-          <span
-            class="absolute left-0.5 top-0.5 h-5 w-5 rounded-pill bg-ink-900 shadow-card transition-transform peer-checked:translate-x-5"
-          />
-        </span>
-      </label>
-    </section>
 
     <!-- Côtes -->
     <section>
