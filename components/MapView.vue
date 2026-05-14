@@ -1,23 +1,30 @@
 <script setup lang="ts">
 /**
- * Carte Leaflet plein écran style Komoot :
- *  - Tiles OSM avec attribution discrète.
- *  - Marker rond personnalisé (vert olive) pour le départ, draggable.
- *  - Polyline composée de segments colorés par type de chemin détecté.
- *  - Marqueurs numérotés tous les ~10% (1–10) sur la polyline pour mimer Komoot.
- *  - Boutons zoom retirés (gérés par FAB externe ou contrôle natif Leaflet).
+ * Carte Leaflet plein écran (thème Outdoor naturel) :
+ *  - Tiles CartoDB Voyager (clair, OSM data, parcs/eau colorés).
+ *  - Marker rond vert forêt pour le départ, draggable.
+ *  - Polyline colorée par type de chemin détecté — OU unicolore si l'analyse
+ *    de terrain est indisponible (`route.terrainFallback`).
+ *  - Marqueurs numérotés tous les ~10 % (1–10) sur la polyline.
+ *  - `bottomInset` : hauteur du bottom sheet — le `fitBounds` réserve cet
+ *    espace en bas pour que le tracé reste centré dans la zone visible.
  */
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import type { LatLng } from '../types/ors'
 import type { AnalyzedRoute } from '../types'
-import { PATH_COLORS } from '../config'
+import { PATH_COLORS, ROUTE_DEFAULT_COLOR } from '../config'
 
-const props = defineProps<{
-  start: LatLng | null
-  route: AnalyzedRoute | null
-  /** Numéro de waypoints à afficher (Komoot-style). Si false → polyline seule. */
-  showWaypoints?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    start: LatLng | null
+    route: AnalyzedRoute | null
+    /** Numéro de waypoints à afficher. Si false → polyline seule. */
+    showWaypoints?: boolean
+    /** Hauteur (px) occupée par le bottom sheet — réservée en bas du fitBounds. */
+    bottomInset?: number
+  }>(),
+  { showWaypoints: true, bottomInset: 0 },
+)
 
 const emit = defineEmits<{
   (e: 'pickStart', position: LatLng): void
@@ -41,7 +48,7 @@ async function loadLeaflet(): Promise<typeof import('leaflet')> {
 function makeStartIcon(L: typeof import('leaflet')) {
   return L.divIcon({
     className: '',
-    html: `<span style="display:block;width:22px;height:22px;border-radius:9999px;background:#00E5FF;border:3px solid #0B0E14;box-shadow:0 0 0 2px #00E5FF, 0 0 16px 4px rgba(0,229,255,0.55);"></span>`,
+    html: `<span style="display:block;width:22px;height:22px;border-radius:9999px;background:#2F6B3F;border:3px solid #FCFBF7;box-shadow:0 2px 6px rgba(42,42,38,0.35);"></span>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   })
@@ -50,10 +57,27 @@ function makeStartIcon(L: typeof import('leaflet')) {
 function makeWaypointIcon(L: typeof import('leaflet'), n: number) {
   return L.divIcon({
     className: '',
-    html: `<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#0B0E14;color:#00E5FF;font-size:12px;font-weight:700;border:1.5px solid #00E5FF;box-shadow:0 0 10px rgba(0,229,255,0.6);">${n}</span>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:#FCFBF7;color:#2F6B3F;font-size:12px;font-weight:700;border:1.5px solid #2F6B3F;box-shadow:0 1px 4px rgba(42,42,38,0.3);">${n}</span>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   })
+}
+
+/** Padding fitBounds qui réserve la place du bottom sheet en bas. */
+function boundsPadding(): {
+  paddingTopLeft: [number, number]
+  paddingBottomRight: [number, number]
+} {
+  return {
+    paddingTopLeft: [40, 56],
+    paddingBottomRight: [40, Math.round(props.bottomInset) + 40],
+  }
+}
+
+function fitRoute(): void {
+  if (!map || !LRef || !props.route) return
+  const b = LRef.latLngBounds(props.route.points.map((p) => [p.lat, p.lng]))
+  map.fitBounds(b, boundsPadding())
 }
 
 onMounted(async () => {
@@ -66,8 +90,8 @@ onMounted(async () => {
     attributionControl: true,
   }).setView([initial.lat, initial.lng], 13)
 
-  // CartoDB Dark Matter (gratuit, OSM data + style sombre)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  // CartoDB Voyager — clair, OSM data, parcs verts / eau bleue (ton outdoor).
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO',
     subdomains: 'abcd',
     maxZoom: 20,
@@ -105,10 +129,9 @@ watch(
   () => props.start,
   async (s) => {
     if (!s || !marker || !map) return
-    const L = await loadLeaflet()
+    await loadLeaflet()
     marker.setLatLng([s.lat, s.lng])
     if (!props.route) map.panTo([s.lat, s.lng])
-    void L
   },
 )
 
@@ -119,16 +142,25 @@ watch(
   },
 )
 
+// Le bottom sheet a changé de taille → on recadre le tracé dans la zone visible.
+watch(
+  () => props.bottomInset,
+  () => {
+    if (props.route) fitRoute()
+  },
+)
+
 async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
   if (!map || !routeLayer) return
   const L = await loadLeaflet()
   routeLayer.clearLayers()
   if (!route) return
 
-  if (route.segments.length === 0) {
+  // Polyline unicolore quand l'analyse de terrain est indisponible.
+  if (route.terrainFallback || route.segments.length === 0) {
     L.polyline(
       route.points.map((p) => [p.lat, p.lng]),
-      { color: PATH_COLORS.unknown, weight: 5, opacity: 0.95, className: 'route-glow' },
+      { color: ROUTE_DEFAULT_COLOR, weight: 5, opacity: 0.95 },
     ).addTo(routeLayer)
   } else {
     const ratio = route.points.length / route.segments.length
@@ -146,7 +178,6 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
               color: PATH_COLORS[currentType as keyof typeof PATH_COLORS] ?? PATH_COLORS.unknown,
               weight: 5,
               opacity: 1,
-              className: 'route-glow',
             },
           ).addTo(routeLayer)
         }
@@ -156,7 +187,7 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
     }
   }
 
-  // Marqueurs numérotés (style Komoot) sur 10 paliers réguliers
+  // Marqueurs numérotés sur 10 paliers réguliers
   if (props.showWaypoints !== false && route.points.length > 10) {
     const total = route.points.length
     for (let i = 1; i <= 10; i++) {
@@ -168,17 +199,14 @@ async function drawRoute(route: AnalyzedRoute | null): Promise<void> {
     }
   }
 
-  const bounds = L.latLngBounds(route.points.map((p) => [p.lat, p.lng]))
-  map.fitBounds(bounds, { padding: [60, 60] })
+  fitRoute()
 }
 
-/** API exposée au parent (pour le bouton "recentrer"). */
+/** API exposée au parent. */
 function recenter(): void {
   if (!map) return
   if (props.route) {
-    if (!LRef) return
-    const b = LRef.latLngBounds(props.route.points.map((p) => [p.lat, p.lng]))
-    map.fitBounds(b, { padding: [60, 60] })
+    fitRoute()
   } else if (props.start) {
     map.panTo([props.start.lat, props.start.lng])
   }

@@ -145,13 +145,13 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             v-model="geocodeQuery"
             type="text"
             placeholder="Recherche une adresse"
-            class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-neon-cyan focus:outline-none"
+            class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
             autocomplete="off"
           />
         </div>
         <button
           type="button"
-          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-neon-cyan transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
+          class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
           style="min-width: 44px; min-height: 44px;"
           :aria-label="geo.loading.value ? 'Localisation en cours' : 'Utiliser ma position actuelle'"
           :aria-busy="geo.loading.value || undefined"
@@ -283,7 +283,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             type="checkbox"
             class="peer sr-only"
           />
-          <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-neon-cyan" />
+          <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
           <span
             class="absolute left-0.5 top-0.5 h-5 w-5 rounded-pill bg-ink-900 shadow-card transition-transform peer-checked:translate-x-5"
           />
@@ -353,7 +353,7 @@ input[type='range']::-webkit-slider-thumb {
   border-radius: 999px;
   background: theme('colors.olive.900');
   border: 3px solid theme('colors.cream.50');
-  box-shadow: 0 0 12px 0 rgba(0, 229, 255, 0.5);
+  box-shadow: 0 1px 4px rgba(42, 42, 38, 0.3);
   cursor: pointer;
 }
 input[type='range']::-moz-range-thumb {
@@ -362,7 +362,7 @@ input[type='range']::-moz-range-thumb {
   border-radius: 999px;
   background: theme('colors.olive.900');
   border: 3px solid theme('colors.cream.50');
-  box-shadow: 0 0 12px 0 rgba(0, 229, 255, 0.5);
+  box-shadow: 0 1px 4px rgba(42, 42, 38, 0.3);
   cursor: pointer;
 }
 </style>

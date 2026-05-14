@@ -87,20 +87,36 @@ export const ELEVATION_NOISE_M = 2
 /** Concurrence max sur Overpass (fair-use). */
 export const OVERPASS_MAX_CONCURRENT = 3
 
+/** Timeout dur des requêtes réseau (ms). */
+export const ORS_FETCH_TIMEOUT_MS = 20_000
+export const OVERPASS_FETCH_TIMEOUT_MS = 18_000
+export const NOMINATIM_FETCH_TIMEOUT_MS = 10_000
+
+/**
+ * Circuit breaker Overpass : après N échecs consécutifs, on arrête d'appeler
+ * Overpass pour les candidats restants (fast-fallback) et on attend un cooldown
+ * avant de réessayer. Évite d'attendre des minutes quand le service est down.
+ */
+export const OVERPASS_CIRCUIT_THRESHOLD = 2
+export const OVERPASS_CIRCUIT_COOLDOWN_MS = 60_000
+
 /** TTL du cache Overpass dans localStorage, en millisecondes (24h). */
 export const OVERPASS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 /** Précision du bbox utilisé comme clé de cache (degrés). */
 export const BBOX_CACHE_PRECISION = 0.01
 
-/** Couleurs des polylines par type de terrain (palette néon dark). */
+/** Couleurs des polylines par type de terrain (palette terre & forêt). */
 export const PATH_COLORS: Record<PathType | 'unknown', string> = {
-  route: '#00E5FF',
-  chemin_large: '#FF9F1C',
-  single: '#A8FF00',
-  mixte: '#B86DFF',
-  unknown: '#6B7280',
+  route: '#3E6E94',
+  chemin_large: '#A9763F',
+  single: '#4F8C5A',
+  mixte: '#7C8579',
+  unknown: '#A8A293',
 }
+
+/** Couleur unique de la polyline quand l'analyse de terrain est indisponible. */
+export const ROUTE_DEFAULT_COLOR = '#2F6B3F'
 
 /** Profil dénivelé selon le type de côte demandé. */
 export interface HillProfile {

@@ -7,7 +7,13 @@
  */
 
 import { haversineM } from '../utils/geo'
-import { ORS_CANDIDATES, ORS_OVER_REQUEST_RATIO, ELEVATION_NOISE_M } from '../config'
+import { fetchWithTimeout } from '../utils/fetch-timeout'
+import {
+  ELEVATION_NOISE_M,
+  ORS_CANDIDATES,
+  ORS_FETCH_TIMEOUT_MS,
+  ORS_OVER_REQUEST_RATIO,
+} from '../config'
 import type {
   LatLng,
   RouteCandidate,
@@ -64,7 +70,7 @@ async function fetchOrsCandidate(
   const body = buildOrsBody(input, seed, lengthM)
   const url = `${config.baseUrl}/v2/directions/${profile}/geojson`
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       Authorization: config.apiKey,
@@ -72,7 +78,8 @@ async function fetchOrsCandidate(
       Accept: 'application/geo+json',
     },
     body: JSON.stringify(body),
-    signal,
+    timeoutMs: ORS_FETCH_TIMEOUT_MS,
+    externalSignal: signal,
   })
 
   if (res.status === 429) throw new OrsQuotaExceededError()

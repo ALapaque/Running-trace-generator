@@ -11,7 +11,7 @@ defineProps<{
     type="button"
     :class="[
       small ? 'fab-sm' : 'fab',
-      active ? '!bg-neon-cyan !text-cream-50 !shadow-glow-cyan' : '',
+      active ? '!bg-olive-900 !text-white' : '',
     ]"
     :aria-label="label"
     :aria-pressed="active ? 'true' : 'false'"

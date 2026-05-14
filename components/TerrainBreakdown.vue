@@ -7,11 +7,11 @@ import { computed, ref } from 'vue'
 import { PATH_COLORS } from '../config'
 import type { TerrainStats } from '../types/osm'
 
+// N'est rendu par la page que lorsque l'analyse de terrain a réussi.
 const props = defineProps<{
   terrain: TerrainStats
   /** Distance totale du parcours en mètres, pour estimer chaque part. */
   distanceM: number
-  fallback?: boolean
 }>()
 
 const open = ref(true)
@@ -62,38 +62,33 @@ function distLabel(ratio: number): string {
     </button>
 
     <div v-show="open" class="space-y-3 pt-1">
-      <div v-if="fallback" class="text-sm text-ink-500">
-        Analyse Overpass indisponible pour ce parcours.
+      <!-- Barre empilée -->
+      <div class="flex h-2 w-full overflow-hidden rounded-pill bg-cream-200" aria-hidden="true">
+        <div
+          v-for="r in rows"
+          :key="r.key"
+          :style="{ width: `${r.ratio * 100}%`, backgroundColor: r.color }"
+        />
       </div>
-      <template v-else>
-        <!-- Barre empilée -->
-        <div class="flex h-2 w-full overflow-hidden rounded-pill bg-cream-200" aria-hidden="true">
-          <div
-            v-for="r in rows"
-            :key="r.key"
-            :style="{ width: `${r.ratio * 100}%`, backgroundColor: r.color }"
+
+      <!-- Liste -->
+      <ul class="divide-y divide-cream-200">
+        <li v-for="r in rows" :key="r.key" class="flex items-center gap-3 py-2.5">
+          <span
+            class="block h-1 w-6 rounded-pill"
+            :style="{ backgroundColor: r.color }"
+            aria-hidden="true"
           />
-        </div>
+          <span class="text-sm text-ink-900">{{ r.label }}</span>
+          <span class="ml-auto text-sm tabular-nums text-ink-700">{{ distLabel(r.ratio) }}</span>
+        </li>
+      </ul>
 
-        <!-- Liste -->
-        <ul class="divide-y divide-cream-200">
-          <li v-for="r in rows" :key="r.key" class="flex items-center gap-3 py-2.5">
-            <span
-              class="block h-1 w-6 rounded-pill"
-              :style="{ backgroundColor: r.color }"
-              aria-hidden="true"
-            />
-            <span class="text-sm text-ink-900">{{ r.label }}</span>
-            <span class="ml-auto text-sm tabular-nums text-ink-700">{{ distLabel(r.ratio) }}</span>
-          </li>
-        </ul>
-
-        <p v-if="terrain.forest > 0" class="text-sm text-ink-700">
-          <span class="inline-block h-2 w-2 align-middle rounded-pill bg-neon-lime shadow-glow-lime" />
-          <span class="ml-2 align-middle font-semibold text-neon-lime">Portions en forêt :</span>
-          <span class="ml-1 tabular-nums">{{ distLabel(terrain.forest) }}</span>
-        </p>
-      </template>
+      <p v-if="terrain.forest > 0" class="text-sm text-ink-700">
+        <span class="inline-block h-2 w-2 align-middle rounded-pill bg-sage-600" />
+        <span class="ml-2 align-middle font-semibold text-olive-900">Portions en forêt :</span>
+        <span class="ml-1 tabular-nums">{{ distLabel(terrain.forest) }}</span>
+      </p>
     </div>
   </section>
 </template>

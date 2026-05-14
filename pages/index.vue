@@ -58,6 +58,24 @@ const loading = computed(
 
 const hasResults = computed(() => pipeline.results.value.length > 0)
 
+/**
+ * Hauteur (px) occupée par le bottom sheet selon son snap.
+ * Passée à MapView pour réserver cet espace dans le fitBounds → le tracé
+ * reste centré dans la portion de carte réellement visible.
+ */
+const sheetBottomInset = computed(() => {
+  if (typeof window === 'undefined') return 200
+  const vh = window.innerHeight
+  switch (snap.value) {
+    case 'full':
+      return Math.round(vh * 0.9)
+    case 'mid':
+      return Math.round(vh * 0.55)
+    default:
+      return 200
+  }
+})
+
 const tabs = computed<Tab[]>(() => [
   { key: 'details', label: 'Détails', disabled: !hasResults.value },
   { key: 'settings', label: 'Paramètres' },
@@ -118,6 +136,7 @@ watch(activeTab, (t) => {
         ref="mapRef"
         :start="start"
         :route="selectedRoute"
+        :bottom-inset="sheetBottomInset"
         @pickStart="onPickStart"
       />
     </div>
@@ -231,7 +250,7 @@ watch(activeTab, (t) => {
       <div v-if="activeTab === 'details' && selectedRoute" class="space-y-6">
         <RouteStats :route="selectedRoute" />
 
-        <!-- Pills difficulté / rythme : décor Komoot -->
+        <!-- Pills difficulté / rythme -->
         <div class="flex flex-wrap gap-2">
           <span class="pill-active">
             Modéré
@@ -241,17 +260,15 @@ watch(activeTab, (t) => {
             6 min/km
             <span class="text-[10px] uppercase opacity-60">Rythme</span>
           </span>
-          <span v-if="selectedRoute.terrainFallback" class="pill-muted text-terracotta-600">
-            Terrain non analysé
-          </span>
         </div>
 
         <ElevationChart :points="selectedRoute.points" />
 
+        <!-- Répartition du terrain : affichée uniquement si l'analyse a réussi -->
         <TerrainBreakdown
+          v-if="!selectedRoute.terrainFallback"
           :terrain="selectedRoute.terrain"
           :distance-m="selectedRoute.distanceM"
-          :fallback="selectedRoute.terrainFallback"
         />
       </div>
 

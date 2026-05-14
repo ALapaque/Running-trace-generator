@@ -35,7 +35,7 @@ function onSelect(t: Tab): void {
       :class="[
         'rounded-pill px-4 py-2 text-sm font-semibold transition',
         modelValue === t.key
-          ? 'bg-neon-cyan text-cream-50 shadow-glow-cyan'
+          ? 'bg-olive-900 text-white shadow-card'
           : 'text-ink-500 hover:text-ink-900',
         t.disabled ? 'opacity-40 pointer-events-none' : '',
       ]"
@@ -45,7 +45,7 @@ function onSelect(t: Tab): void {
       {{ t.label }}
       <span
         v-if="t.badge !== undefined"
-        class="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-cream-50 px-1 text-[10px] text-neon-cyan ring-1 ring-neon-cyan"
+        class="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-pill bg-white/25 px-1 text-[10px] font-bold text-white"
       >
         {{ t.badge }}
       </span>

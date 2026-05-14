@@ -1,17 +1,15 @@
 import type { Config } from 'tailwindcss'
 
 /**
- * Thème dark neon.
+ * Thème « Outdoor naturel ».
  *
- * Note de naming : les noms d'échelles (cream / ink / olive / sage / terracotta)
- * sont conservés du thème Komoot pour limiter la churn, mais leurs valeurs
- * ont été remappées en sombre/néon :
- *  - cream-*       : surfaces sombres (page, sheet, cards, borders)
- *  - ink-*         : texte clair sur fond sombre
- *  - olive-*       : accent primaire — cyan néon
- *  - sage-*        : accent élévation — vert lime néon
- *  - terracotta-*  : accent erreur/highlight — magenta néon
- *  - neon-*        : nouveaux tokens explicites (glow, accent secondaire)
+ * Naming des échelles conservé (cream / ink / olive / sage / terracotta) pour
+ * limiter la churn, valeurs remappées en tons terre & forêt :
+ *  - cream-*       : fond crème chaud + surfaces claires + borders
+ *  - ink-*         : texte (du plus contrasté au plus discret)
+ *  - olive-*       : accent primaire — vert forêt
+ *  - sage-*        : accent élévation — vert doux
+ *  - terracotta-*  : accent secondaire / alerts — terre cuite
  */
 export default <Config>{
   content: [
@@ -25,62 +23,54 @@ export default <Config>{
   theme: {
     extend: {
       colors: {
-        // Fonds sombres (page → cards → borders)
+        // Crème chaud (page → surfaces → borders)
         cream: {
-          50: '#0B0E14', // page background
-          100: '#161A23', // sheet, cards, FABs
-          200: '#252B38', // borders subtils
-          300: '#3A4252', // hover borders, dividers forts
-          400: '#525B73', // texte ultra-secondaire
+          50: '#F4F1EA', // page background
+          100: '#FCFBF7', // sheet, cards, FABs (blanc cassé chaud)
+          200: '#E7E2D5', // borders
+          300: '#D4CDBA', // borders forts / dividers
+          400: '#A8A293', // texte ultra-discret
         },
-        // Texte clair (du plus contrasté au plus muted)
+        // Texte
         ink: {
-          900: '#F1F5F9',
-          700: '#CBD5E1',
-          500: '#94A3B8',
-          400: '#6B7280',
-          300: '#4B5563',
-          200: '#3F4757',
-          100: '#2A3142',
+          900: '#2A2A26',
+          700: '#4A493F',
+          500: '#6B6A60',
+          400: '#8A8979',
+          300: '#A8A293',
+          200: '#C9C4B5',
+          100: '#E7E2D5',
         },
-        // Cyan néon (accent primaire — CTAs, sélections, polyline route)
+        // Vert forêt (accent primaire)
         olive: {
-          50: '#E6FDFF',
-          100: '#CCFAFF',
-          200: '#7FF3FF',
-          400: '#33EDFF',
-          500: '#00E5FF',
-          700: '#00B8CC',
-          800: '#0096A6',
-          900: '#00E5FF', // alias pour `bg-olive-900` (CTAs)
+          50: '#EBF2ED',
+          100: '#D6E5DA',
+          200: '#A9C9B0',
+          400: '#4A8C5A',
+          500: '#2F6B3F',
+          700: '#275A35',
+          800: '#21502F',
+          900: '#2F6B3F',
         },
-        // Vert lime néon (élévation + accents éco)
+        // Vert doux (élévation)
         sage: {
-          200: '#3F6B23', // remplit profil altimétrique (dark lime)
-          400: '#7CD63E',
-          600: '#A8FF00',
+          200: '#C9DCC0',
+          400: '#7FA86B',
+          600: '#4F8C5A',
         },
-        // Magenta néon (alerts / accent secondaire)
+        // Terre cuite (accent secondaire / alerts)
         terracotta: {
-          400: '#FF1FBA',
-          500: '#FF2EC4',
-          600: '#FF66D6',
+          400: '#D17A56',
+          500: '#C4623D',
+          600: '#A04B2C',
         },
         // Couleurs polyline par type de chemin (synchro PATH_COLORS dans config.ts)
         terrain: {
-          route: '#00E5FF',
-          chemin: '#FF9F1C',
-          single: '#A8FF00',
-          mixte: '#B86DFF',
-          unknown: '#6B7280',
-        },
-        // Tokens explicites
-        neon: {
-          cyan: '#00E5FF',
-          magenta: '#FF2EC4',
-          lime: '#A8FF00',
-          amber: '#FF9F1C',
-          purple: '#B86DFF',
+          route: '#3E6E94',
+          chemin: '#A9763F',
+          single: '#4F8C5A',
+          mixte: '#7C8579',
+          unknown: '#A8A293',
         },
       },
       borderRadius: {
@@ -89,14 +79,9 @@ export default <Config>{
         pill: '999px',
       },
       boxShadow: {
-        // Glow néon pour CTAs et éléments primaires
-        'glow-cyan': '0 0 24px -4px rgba(0, 229, 255, 0.55), 0 0 1px rgba(0, 229, 255, 0.9)',
-        'glow-magenta': '0 0 24px -4px rgba(255, 46, 196, 0.55), 0 0 1px rgba(255, 46, 196, 0.9)',
-        'glow-lime': '0 0 20px -4px rgba(168, 255, 0, 0.45)',
-        // Shadow standard pour éléments neutres (sombres → besoin d'élévation visible)
-        sheet: '0 -20px 60px -20px rgba(0, 0, 0, 0.6)',
-        float: '0 4px 16px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 229, 255, 0.08)',
-        card: '0 2px 12px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04)',
+        sheet: '0 -8px 32px -12px rgba(42, 42, 38, 0.20)',
+        float: '0 4px 14px -4px rgba(42, 42, 38, 0.20), 0 1px 3px rgba(42, 42, 38, 0.08)',
+        card: '0 1px 4px rgba(42, 42, 38, 0.06)',
       },
       spacing: {
         '4.5': '18px',
@@ -112,7 +97,7 @@ export default <Config>{
         stat: ['28px', { lineHeight: '1.1', fontWeight: '700' }],
         'stat-sm': ['22px', { lineHeight: '1.1', fontWeight: '700' }],
         unit: ['12px', { lineHeight: '1', fontWeight: '500' }],
-        label: ['11px', { lineHeight: '1.2', fontWeight: '600', letterSpacing: '0.06em' }],
+        label: ['11px', { lineHeight: '1.2', fontWeight: '600', letterSpacing: '0.05em' }],
       },
       transitionTimingFunction: {
         'out-soft': 'cubic-bezier(0.22, 1, 0.36, 1)',

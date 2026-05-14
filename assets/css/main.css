@@ -15,47 +15,41 @@ body {
   @apply bg-cream-50 text-ink-900 antialiased;
   font-feature-settings: 'cv11', 'ss01', 'tnum';
   overscroll-behavior-y: contain;
-  background: radial-gradient(ellipse at top, #11151F 0%, #0B0E14 60%);
 }
 
-/* Carte sombre */
+/* Carte claire */
 .leaflet-container {
-  background: #050608;
+  background: #E8E4D8;
   font-family: inherit;
 }
 
-/* Style néon des contrôles Leaflet (si présents) */
+/* Contrôles Leaflet discrets */
 .leaflet-control-zoom {
   border: none !important;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 229, 255, 0.08) !important;
+  box-shadow: 0 4px 14px -4px rgba(42, 42, 38, 0.2) !important;
   border-radius: 14px !important;
   overflow: hidden;
 }
 .leaflet-control-zoom a {
-  background: #161A23 !important;
-  color: #00E5FF !important;
+  background: #fcfbf7 !important;
+  color: #2f6b3f !important;
   font-weight: 600 !important;
-  border-bottom-color: #252B38 !important;
+  border-bottom-color: #e7e2d5 !important;
 }
 .leaflet-control-attribution {
-  background: rgba(11, 14, 20, 0.85) !important;
-  color: #94A3B8 !important;
+  background: rgba(252, 251, 247, 0.88) !important;
+  color: #6b6a60 !important;
   font-size: 10px !important;
   border-radius: 6px !important;
   padding: 2px 6px !important;
 }
 .leaflet-control-attribution a {
-  color: #00E5FF !important;
+  color: #2f6b3f !important;
 }
 
-/* Glow sur les polylines route (appliqué via className Leaflet) */
-.route-glow {
-  filter: drop-shadow(0 0 6px currentColor);
-}
-
-/* Accessibilité : focus visible cohérent en néon */
+/* Accessibilité : focus visible */
 :focus-visible {
-  outline: 2px solid #00E5FF;
+  outline: 2px solid #2f6b3f;
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -71,22 +65,23 @@ body {
 }
 
 @layer components {
-  /* CTA primaire — cyan néon avec glow et texte sombre pour le contraste */
+  /* CTA primaire — vert forêt */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-neon-cyan px-6 py-3
-           text-sm font-bold text-cream-50 shadow-glow-cyan transition
-           hover:bg-olive-400 active:scale-[0.98]
-           disabled:bg-cream-200 disabled:text-ink-400 disabled:cursor-not-allowed disabled:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-olive-900 px-6 py-3
+           text-sm font-semibold text-white shadow-float transition
+           hover:bg-olive-800 active:scale-[0.98]
+           disabled:bg-cream-300 disabled:text-ink-400 disabled:cursor-not-allowed disabled:shadow-none;
     min-height: 44px;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-pill bg-cream-100 px-4 py-2
-           text-sm font-medium text-ink-900 transition hover:bg-cream-200 active:scale-[0.98];
+           text-sm font-medium text-ink-900 ring-1 ring-cream-200 transition
+           hover:bg-cream-200 active:scale-[0.98];
     min-height: 44px;
   }
 
-  /* FAB sombre avec icône claire et liseré subtil */
+  /* FAB clair avec icône verte */
   .fab {
     @apply flex h-11 w-11 items-center justify-center rounded-full bg-cream-100 text-ink-900
            shadow-float transition hover:bg-cream-200 active:scale-95;
@@ -101,13 +96,13 @@ body {
     @apply inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold;
   }
   .pill-active {
-    @apply pill bg-neon-cyan text-cream-50 shadow-glow-cyan;
+    @apply pill bg-olive-900 text-white;
   }
   .pill-muted {
     @apply pill bg-cream-100 text-ink-900 ring-1 ring-cream-200;
   }
 
-  /* Cartes : surface sombre, hairline lumineux pour les séparer */
+  /* Cartes : surface claire, hairline discret */
   .card {
     @apply rounded-card bg-cream-100 p-4 shadow-card ring-1 ring-cream-200;
   }
