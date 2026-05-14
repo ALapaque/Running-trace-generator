@@ -396,13 +396,13 @@ watch(selectedRoute, () => {
       />
     </div>
 
-    <!-- Header flottant (top-left + top-right) -->
+    <!-- Header flottant : sélecteur de langue (+ raccourcis mobile). -->
     <div
       class="pointer-events-none absolute inset-x-0 top-0 z-hud flex items-start justify-between p-3"
       style="padding-top: max(0.75rem, env(safe-area-inset-top));"
     >
-      <!-- Top-left : sélecteur de langue (toujours) + raccourcis paramètres /
-           piéton (mobile uniquement — sur desktop la sidebar les remplace) -->
+      <!-- Top-left : sélecteur de langue (toujours) + raccourcis paramètres
+           (mobile uniquement — sur desktop la sidebar les remplace) -->
       <div class="pointer-events-auto flex flex-col gap-2">
         <FloatingButton :label="t('lang.label')" @click="cycleLocale">
           <FlagIcon :locale="locale" />
@@ -417,19 +417,26 @@ watch(selectedRoute, () => {
           </FloatingButton>
         </template>
       </div>
+    </div>
 
-      <!-- Top-right : Enregistrer + reset -->
-      <div class="pointer-events-auto flex items-center gap-2">
-        <ExportMenu v-if="selectedRoute" :route="selectedRoute" :params="lastParams" />
+    <!-- Enregistrer + réinitialiser : haut-droite sur mobile, bas-gauche sur
+         desktop (la sidebar occupe le haut-droite). -->
+    <div
+      v-if="selectedRoute || hasResults"
+      class="pointer-events-auto absolute z-hud flex items-center gap-2"
+      :class="isDesktop ? 'bottom-6 left-6' : 'right-3'"
+      :style="isDesktop ? undefined : { top: 'max(0.75rem, env(safe-area-inset-top))' }"
+    >
+      <ExportMenu
+        v-if="selectedRoute"
+        :route="selectedRoute"
+        :params="lastParams"
+        :drop-up="isDesktop"
+      />
 
-         <FloatingButton
-          v-if="hasResults"
-          :label="t(`fab.reset`)"
-          @click="onReset"
-        >
-          <Icon name="close" class="h-5 w-5" />
-        </FloatingButton>
-      </div>
+      <FloatingButton v-if="hasResults" :label="t('fab.reset')" @click="onReset">
+        <Icon name="close" class="h-5 w-5" />
+      </FloatingButton>
     </div>
 
     <!-- FABs droite : zoom + recenter (au-dessus du sheet sur mobile,
