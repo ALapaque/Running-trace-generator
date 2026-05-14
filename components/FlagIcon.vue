@@ -14,13 +14,13 @@ defineProps<{ locale: Locale }>()
     aria-hidden="true"
   >
     <!-- France — 3:2 -->
-    <svg v-if="locale === 'fr'" class="block h-4 w-auto" viewBox="0 0 3 2">
+    <svg v-if="locale === 'fr'" class="block h-4 w-6" viewBox="0 0 3 2">
       <rect width="1" height="2" fill="#0055A4" />
       <rect width="1" height="2" x="1" fill="#FFFFFF" />
       <rect width="1" height="2" x="2" fill="#EF4135" />
     </svg>
     <!-- Royaume-Uni — 2:1 (Union Jack), pour l'anglais -->
-    <svg v-else class="block h-4 w-auto" viewBox="0 0 60 30">
+    <svg v-else class="block h-4 w-8" viewBox="0 0 60 30">
       <clipPath id="flag-gb-clip">
         <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" />
       </clipPath>
