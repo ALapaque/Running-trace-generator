@@ -60,16 +60,17 @@ function fmtDuration(distanceM: number): string {
       >
         <div
           :class="[
-            'flex items-center gap-3 rounded-card border p-3 transition',
+            'flex items-center gap-3 border p-3 transition',
             selectedId === entry.id
-              ? 'border-olive-900 bg-olive-50'
-              : 'border-cream-200 bg-cream-100 hover:border-cream-300',
+              ? 'rounded-t-card border-olive-900 bg-olive-50'
+              : 'rounded-card border-cream-200 bg-cream-100 hover:border-cream-300',
           ]"
         >
           <button
             type="button"
             class="flex-1 text-left"
             :aria-pressed="selectedId === entry.id"
+            :aria-expanded="selectedId === entry.id"
             @click="emit('select', entry.id)"
           >
             <p class="flex items-baseline gap-1">
@@ -106,6 +107,21 @@ function fmtDuration(distanceM: number): string {
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
           </button>
+        </div>
+
+        <!-- Détail inline : s'ouvre sous l'entrée d'historique sélectionnée -->
+        <div
+          class="grid transition-[grid-template-rows] duration-300 ease-out-soft"
+          :class="selectedId === entry.id ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+        >
+          <div class="overflow-hidden">
+            <div
+              v-if="selectedId === entry.id"
+              class="rounded-b-card border-x border-b border-olive-900 bg-olive-50 p-3"
+            >
+              <slot name="detail" />
+            </div>
+          </div>
         </div>
       </li>
     </ul>

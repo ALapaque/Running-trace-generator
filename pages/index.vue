@@ -15,17 +15,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import BottomSheet, { type SheetSnap } from '../components/BottomSheet.vue'
 import ControlPanel, { type ControlPanelSubmit } from '../components/ControlPanel.vue'
-import ElevationChart from '../components/ElevationChart.vue'
 import ExportMenu from '../components/ExportMenu.vue'
 import FloatingButton from '../components/FloatingButton.vue'
 import FloatingPanel from '../components/FloatingPanel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import MapView from '../components/MapView.vue'
 import RouteAlternatives from '../components/RouteAlternatives.vue'
+import RouteDetail from '../components/RouteDetail.vue'
 import RouteHistory from '../components/RouteHistory.vue'
-import RouteStats from '../components/RouteStats.vue'
 import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
-import TerrainBreakdown from '../components/TerrainBreakdown.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useI18n } from '../composables/useI18n'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
@@ -35,12 +33,10 @@ import { useRunnerPace } from '../composables/useRunnerPace'
 import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/share-url'
 import { reverseRoute } from '../utils/route-ops'
 import { climbConcentration } from '../utils/climbs'
-import { computeDifficulty } from '../utils/difficulty'
-import { formatPace } from '../utils/pace'
 import type { AnalyzedRoute, GenerationParams, RouteCandidate, TerrainStats } from '../types'
 import type { LatLng } from '../types/ors'
 
-type TabKey = 'details' | 'settings' | 'alternatives' | 'history'
+type TabKey = 'settings' | 'alternatives' | 'history'
 
 const start = ref<LatLng | null>(null)
 const selectedId = ref<string | null>(null)
@@ -133,16 +129,10 @@ const selectedRoute = computed<AnalyzedRoute | null>(() =>
   baseRoute.value && reversed.value ? reverseRoute(baseRoute.value) : baseRoute.value,
 )
 
-/** Difficulté estimée du parcours affiché (distance + D+ + technicité). */
-const difficulty = computed(() => {
-  const r = selectedRoute.value
-  if (!r) return null
-  return computeDifficulty(
-    r.distanceM,
-    r.elevationGainM,
-    r.terrainFallback ? 0 : r.terrain.single,
-  )
-})
+/** Alternative dépliée : aucune si on consulte un parcours d'historique. */
+const alternativesExpandedId = computed(() =>
+  viewedHistoryRoute.value ? null : selectedId.value,
+)
 
 const loading = computed(
   () =>
@@ -180,7 +170,6 @@ const fabClusterStyle = computed(() => {
 })
 
 const tabs = computed<Tab[]>(() => [
-  { key: 'details', label: t('tabs.details'), disabled: !selectedRoute.value },
   { key: 'settings', label: t('tabs.settings') },
   {
     key: 'alternatives',
@@ -215,7 +204,7 @@ async function onSubmit(payload: ControlPanelSubmit): Promise<void> {
     const top = await pipeline.run(input, { signal: abort.signal, resultsCount })
     selectedId.value = top[0]?.id ?? null
     if (top[0]) history.add(top[0])
-    activeTab.value = 'details'
+    activeTab.value = 'alternatives'
     snap.value = 'mid'
   } catch {
     // L'erreur est gérée par le composable et affichée en bas du sheet.
@@ -246,7 +235,7 @@ function onSelectHistory(id: string): void {
   clearEditState()
   viewedHistoryRoute.value = historyEntryToRoute(entry)
   reversed.value = false
-  activeTab.value = 'details'
+  activeTab.value = 'history'
   snap.value = 'mid'
 }
 
@@ -504,105 +493,7 @@ watch(activeTab, (t) => {
 
       <!-- Contenu par onglet — transition douce out-in entre onglets -->
       <Transition name="tab" mode="out-in">
-        <div
-          v-if="activeTab === 'details' && selectedRoute"
-          key="details"
-          class="space-y-6 pt-1"
-        >
-          <div class="animate-reveal">
-            <RouteStats :route="selectedRoute" :pace="pace" />
-          </div>
-
-          <!-- Pills difficulté (calculée) / rythme (réglable) + inversion du sens -->
-          <div
-            class="animate-reveal flex flex-wrap items-center gap-2"
-            style="animation-delay: 60ms"
-          >
-          <span class="pill-active">
-            {{ difficulty ? t(`difficulty.${difficulty.level}`) : '' }}
-            <span class="text-[10px] uppercase opacity-80">{{ t('details.difficulty') }}</span>
-          </span>
-          <button
-            type="button"
-            class="pill-muted"
-            :aria-label="t('details.changePace')"
-            @click="cyclePace"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              class="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="7 10 12 5 17 10" />
-              <polyline points="7 14 12 19 17 14" />
-            </svg>
-            {{ formatPace(pace) }} {{ t('units.minPerKm') }}
-            <span class="text-[10px] uppercase opacity-60">{{ t('details.pace') }}</span>
-          </button>
-          <button
-            type="button"
-            :class="reversed ? 'pill-active' : 'pill-muted'"
-            :aria-pressed="reversed"
-            @click="reversed = !reversed"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              class="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="17 1 21 5 17 9" />
-              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-              <polyline points="7 23 3 19 7 15" />
-              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-            </svg>
-            {{ t('details.reverse') }}
-          </button>
-          <button type="button" class="pill-muted" @click="enterEditMode">
-            <svg
-              viewBox="0 0 24 24"
-              class="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-              {{ t('details.edit') }}
-            </button>
-          </div>
-
-          <div class="animate-reveal" style="animation-delay: 120ms">
-            <ElevationChart :points="selectedRoute.points" />
-          </div>
-
-          <!-- Répartition du terrain : affichée uniquement si l'analyse a réussi -->
-          <div
-            v-if="!selectedRoute.terrainFallback"
-            class="animate-reveal"
-            style="animation-delay: 180ms"
-          >
-            <TerrainBreakdown
-              :terrain="selectedRoute.terrain"
-              :distance-m="selectedRoute.distanceM"
-            />
-          </div>
-        </div>
-
-        <div v-else-if="activeTab === 'settings'" key="settings" class="pt-1">
+        <div v-if="activeTab === 'settings'" key="settings" class="pt-1">
           <ControlPanel
             ref="cpRef"
             :start="start"
@@ -619,14 +510,28 @@ watch(activeTab, (t) => {
           key="alternatives"
           class="pt-1"
         >
+          <!-- Détail inline sous l'alternative sélectionnée -->
           <RouteAlternatives
             :routes="pipeline.results.value"
-            :selectedId="selectedId"
-            @select="(id) => { onSelectRoute(id); activeTab = 'details' }"
-          />
+            :selectedId="alternativesExpandedId"
+            @select="onSelectRoute"
+          >
+            <template #detail>
+              <RouteDetail
+                v-if="selectedRoute"
+                :route="selectedRoute"
+                :pace="pace"
+                :reversed="reversed"
+                @cyclePace="cyclePace"
+                @toggleReverse="reversed = !reversed"
+                @edit="enterEditMode"
+              />
+            </template>
+          </RouteAlternatives>
         </div>
 
         <div v-else-if="activeTab === 'history'" key="history" class="pt-1">
+          <!-- Détail inline sous l'entrée d'historique sélectionnée -->
           <RouteHistory
             :entries="history.list.value"
             :selectedId="viewedHistoryId"
@@ -634,7 +539,19 @@ watch(activeTab, (t) => {
             @select="onSelectHistory"
             @remove="onRemoveHistory"
             @clear="onClearHistory"
-          />
+          >
+            <template #detail>
+              <RouteDetail
+                v-if="selectedRoute"
+                :route="selectedRoute"
+                :pace="pace"
+                :reversed="reversed"
+                @cyclePace="cyclePace"
+                @toggleReverse="reversed = !reversed"
+                @edit="enterEditMode"
+              />
+            </template>
+          </RouteHistory>
         </div>
       </Transition>
 

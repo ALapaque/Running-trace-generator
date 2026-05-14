@@ -9,7 +9,6 @@ export const fr = {
   app: { title: 'RunGen — générateur de traces de running GPX' },
 
   tabs: {
-    details: 'Détails',
     settings: 'Paramètres',
     alternatives: 'Alternatives',
     history: 'Historique',
@@ -174,7 +173,6 @@ export const en: typeof fr = {
   app: { title: 'RunGen — GPX running route generator' },
 
   tabs: {
-    details: 'Details',
     settings: 'Settings',
     alternatives: 'Alternatives',
     history: 'History',

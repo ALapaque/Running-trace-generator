@@ -30,11 +30,12 @@ function fmtKm(m: number): string {
           type="button"
           role="option"
           :aria-selected="selectedId === r.id"
+          :aria-expanded="selectedId === r.id"
           :class="[
-            'flex w-full items-center gap-3 rounded-card border p-3 text-left transition',
+            'flex w-full items-center gap-3 border p-3 text-left transition',
             selectedId === r.id
-              ? 'border-olive-900 bg-olive-50 shadow-card'
-              : 'border-cream-200 bg-cream-100 hover:border-cream-300',
+              ? 'rounded-t-card border-olive-900 bg-olive-50'
+              : 'rounded-card border-cream-200 bg-cream-100 hover:border-cream-300',
           ]"
           @click="emit('select', r.id)"
         >
@@ -63,6 +64,21 @@ function fmtKm(m: number): string {
           </div>
           <span class="font-mono text-[11px] text-ink-400">{{ t('alternatives.score') }} {{ r.score.toFixed(2) }}</span>
         </button>
+
+        <!-- Détail inline : s'ouvre sous l'alternative sélectionnée -->
+        <div
+          class="grid transition-[grid-template-rows] duration-300 ease-out-soft"
+          :class="selectedId === r.id ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+        >
+          <div class="overflow-hidden">
+            <div
+              v-if="selectedId === r.id"
+              class="rounded-b-card border-x border-b border-olive-900 bg-olive-50 p-3"
+            >
+              <slot name="detail" />
+            </div>
+          </div>
+        </div>
       </li>
     </ul>
   </section>
