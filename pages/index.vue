@@ -34,7 +34,7 @@ import { useRouteHistory, historyEntryToRoute } from '../composables/useRouteHis
 import { useRunnerPace } from '../composables/useRunnerPace'
 import { useLastResults } from '../composables/useLastResults'
 import { buildShareUrl, decodeParamsFromHash, encodeParams } from '../utils/share-url'
-import { reverseRoute } from '../utils/route-ops'
+import { reverseRoute, sampleWaypoints } from '../utils/route-ops'
 import { climbConcentration } from '../utils/climbs'
 import type { AnalyzedRoute, GenerationParams, RouteCandidate, TerrainStats } from '../types'
 import type { LatLng, RoutePoint } from '../types/ors'
@@ -267,22 +267,11 @@ function onSelectHistory(id: string): void {
 }
 
 // --- Édition manuelle du tracé ---
-/** Échantillonne `count` waypoints intermédiaires + le départ depuis un parcours. */
-function sampleWaypoints(route: AnalyzedRoute, count = 6): LatLng[] {
-  const pts = route.points
-  const wps: LatLng[] = [{ lat: pts[0]!.lat, lng: pts[0]!.lng }]
-  for (let i = 1; i <= count; i++) {
-    const idx = Math.min(pts.length - 1, Math.floor((pts.length / (count + 1)) * i))
-    wps.push({ lat: pts[idx]!.lat, lng: pts[idx]!.lng })
-  }
-  return wps
-}
-
 function enterEditMode(): void {
   const route = selectedRoute.value
   if (!route) return
   editedRouteBeforeEdit = editedRoute.value
-  editableWaypoints.value = sampleWaypoints(route)
+  editableWaypoints.value = sampleWaypoints(route.points)
   reversed.value = false
   editError.value = null
   editMode.value = true
@@ -610,6 +599,12 @@ watch(selectedRoute, () => {
         class="mt-2 rounded-card bg-cream-100 px-4 py-3 text-xs text-terracotta-600"
       >
         {{ t('warnings.toleranceRelaxed') }}
+      </div>
+      <div
+        v-if="pipeline.brouterFallback.value"
+        class="mt-2 rounded-card bg-cream-100 px-4 py-3 text-xs text-ink-700"
+      >
+        {{ t('warnings.brouterUnavailable') }}
       </div>
 
       <!-- CTA Générer rendu dans le footer du sheet (toujours visible sur l'onglet Paramètres) -->

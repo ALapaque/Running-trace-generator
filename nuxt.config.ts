@@ -49,6 +49,13 @@ export default defineNuxtConfig({
       overpassBaseUrl: 'https://overpass-api.de/api/interpreter',
       overpassFallbackUrl: 'https://overpass.kumi.systems/api/interpreter',
       nominatimBaseUrl: 'https://nominatim.openstreetmap.org',
+      // BRouter — routage trail. Proxifié par /api/brouter/route (côté serveur).
+      // Vider NUXT_PUBLIC_BROUTER_BASE_URL désactive le re-routage trail (→ ORS).
+      // Pas de miroir public fiable trouvé : `brouterFallbackUrl` reste vide
+      // (la dégradation gracieuse — fallback ORS par candidat + circuit breaker —
+      // couvre une indisponibilité de brouter.de).
+      brouterBaseUrl: 'https://brouter.de/brouter',
+      brouterFallbackUrl: '',
     },
   },
   typescript: {

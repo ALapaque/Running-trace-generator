@@ -91,7 +91,7 @@ export interface RoutePoint {
   distance: number
 }
 
-/** Candidat ORS brut (avant analyse de terrain). */
+/** Candidat brut (avant analyse de terrain). */
 export interface RouteCandidate {
   id: string
   seed: number
@@ -99,4 +99,6 @@ export interface RouteCandidate {
   distanceM: number
   elevationGainM: number
   elevationLossM: number
+  /** Moteur ayant produit la géométrie. Absent = ORS (cas par défaut). */
+  routingEngine?: 'ors' | 'brouter'
 }

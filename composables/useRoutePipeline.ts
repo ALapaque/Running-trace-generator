@@ -5,6 +5,7 @@
 
 import { ref } from 'vue'
 import { OrsQuotaExceededError, useRouteGenerator } from './useRouteGenerator'
+import { useBrouterRouter } from './useBrouterRouter'
 import { useTerrainAnalyzer } from './useTerrainAnalyzer'
 import { useScoring } from './useScoring'
 import { useI18n } from './useI18n'
@@ -55,11 +56,14 @@ export function useRoutePipeline() {
   const errorMessage = ref<string | null>(null)
   const quotaWarning = ref(false)
   const overpassFallback = ref(false)
+  /** True quand le re-routage trail BRouter a dû être contourné (échec / circuit). */
+  const brouterFallback = ref(false)
   /** True quand le filtre de tolérance distance a dû être relâché. */
   const distanceToleranceRelaxed = ref(false)
   const results = ref<AnalyzedRoute[]>([])
 
   const { generateCandidates } = useRouteGenerator()
+  const { rerouteCandidates } = useBrouterRouter()
   const { analyzeCandidate } = useTerrainAnalyzer()
   const { rank } = useScoring()
 
@@ -76,15 +80,26 @@ export function useRoutePipeline() {
     errorMessage.value = null
     quotaWarning.value = false
     overpassFallback.value = false
+    brouterFallback.value = false
     results.value = []
 
     try {
-      const { candidates, quotaExceeded } = await generateCandidates(input, {
+      const { candidates: orsCandidates, quotaExceeded } = await generateCandidates(input, {
         signal,
         count: candidateCount,
       })
       quotaWarning.value = quotaExceeded
-      progress.value = 0.35
+      progress.value = input.mode === 'trail' ? 0.2 : 0.35
+
+      // Mode trail : on re-route chaque boucle ORS via BRouter pour qu'elle
+      // suive réellement les sentiers. Échec → on garde les candidats ORS.
+      let candidates = orsCandidates
+      if (input.mode === 'trail') {
+        const reroute = await rerouteCandidates(orsCandidates, input, signal)
+        candidates = reroute.candidates
+        brouterFallback.value = reroute.fallback
+        progress.value = 0.35
+      }
 
       stage.value = 'analyzing'
       const analyses = []
@@ -145,6 +160,7 @@ export function useRoutePipeline() {
     errorMessage.value = null
     results.value = []
     distanceToleranceRelaxed.value = false
+    brouterFallback.value = false
   }
 
   /** Restaure des résultats persistés (reload de session) sans relancer le pipeline. */
@@ -159,6 +175,7 @@ export function useRoutePipeline() {
     errorMessage,
     quotaWarning,
     overpassFallback,
+    brouterFallback,
     distanceToleranceRelaxed,
     results,
     run,
