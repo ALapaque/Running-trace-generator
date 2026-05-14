@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from '../composables/useI18n'
 import type { PipelineStage } from '../composables/useRoutePipeline'
 
 const props = defineProps<{
@@ -7,14 +8,16 @@ const props = defineProps<{
   progress: number
 }>()
 
+const { t } = useI18n()
+
 const label = computed(() => {
   switch (props.stage) {
     case 'generating':
-      return 'Génération du parcours…'
+      return t('loading.generating')
     case 'analyzing':
-      return 'Analyse du terrain…'
+      return t('loading.analyzing')
     case 'scoring':
-      return 'Sélection des meilleurs candidats…'
+      return t('loading.scoring')
     default:
       return ''
   }

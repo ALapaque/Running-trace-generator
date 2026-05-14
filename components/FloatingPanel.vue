@@ -11,6 +11,9 @@
  * puisse basculer entre les deux via `<component :is>` sans dupliquer le contenu.
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from '../composables/useI18n'
+
+const { t } = useI18n()
 
 const PANEL_W = 380
 const MARGIN = 16
@@ -94,7 +97,7 @@ onBeforeUnmount(() => {
       maxHeight: `calc(100dvh - ${2 * MARGIN}px)`,
     }"
     role="dialog"
-    aria-label="Panneau du parcours"
+    :aria-label="t('panel.label')"
   >
     <!-- Barre de préhension (drag) -->
     <div
@@ -122,7 +125,7 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="ml-auto flex h-9 w-9 items-center justify-center rounded-pill text-ink-500 transition hover:bg-cream-200"
-        :aria-label="collapsed ? 'Déplier le panneau' : 'Replier le panneau'"
+        :aria-label="collapsed ? t('panel.expand') : t('panel.collapse')"
         :aria-expanded="!collapsed"
         @click="collapsed = !collapsed"
       >

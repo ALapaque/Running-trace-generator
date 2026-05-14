@@ -10,6 +10,7 @@
  * Accessibilité : role="dialog", aria-modal sur scrim actif, aria-label sur la poignée.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from '../composables/useI18n'
 
 export type SheetSnap = 'peek' | 'mid' | 'full'
 
@@ -24,6 +25,8 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ (e: 'update:snap', value: SheetSnap): void }>()
+
+const { t } = useI18n()
 
 const sheetEl = ref<HTMLElement | null>(null)
 const dragging = ref(false)
@@ -200,7 +203,7 @@ function onScrimClick(): void {
     :style="{ height: sheetVisibleHeight, transition }"
     role="dialog"
     aria-modal="false"
-    aria-label="Détails du parcours"
+    :aria-label="t('panel.sheetLabel')"
   >
     <!-- Zone draggable : poignée (le drag est aussi capté sur le header) -->
     <div
@@ -211,7 +214,7 @@ function onScrimClick(): void {
       @pointercancel="onPointerUp"
       role="button"
       tabindex="0"
-      aria-label="Glisser pour redimensionner"
+      :aria-label="t('panel.drag')"
     >
       <span class="drag-handle block" />
     </div>

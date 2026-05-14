@@ -27,6 +27,7 @@ import RouteStats from '../components/RouteStats.vue'
 import SheetTabs, { type Tab } from '../components/SheetTabs.vue'
 import TerrainBreakdown from '../components/TerrainBreakdown.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
+import { useI18n } from '../composables/useI18n'
 import { useRoutePipeline } from '../composables/useRoutePipeline'
 import { useRouteGenerator } from '../composables/useRouteGenerator'
 import { useRouteHistory, historyEntryToRoute } from '../composables/useRouteHistory'
@@ -50,6 +51,7 @@ let abort: AbortController | null = null
 const pipeline = useRoutePipeline()
 const history = useRouteHistory()
 const { pace, cycle: cyclePace } = useRunnerPace()
+const { t } = useI18n()
 const mapRef = ref<InstanceType<typeof MapView> | null>(null)
 const cpRef = ref<InstanceType<typeof ControlPanel> | null>(null)
 /** Validité du formulaire (départ défini + au moins distance ou dénivelé actif). */
@@ -178,17 +180,17 @@ const fabClusterStyle = computed(() => {
 })
 
 const tabs = computed<Tab[]>(() => [
-  { key: 'details', label: 'Détails', disabled: !selectedRoute.value },
-  { key: 'settings', label: 'Paramètres' },
+  { key: 'details', label: t('tabs.details'), disabled: !selectedRoute.value },
+  { key: 'settings', label: t('tabs.settings') },
   {
     key: 'alternatives',
-    label: 'Alternatives',
+    label: t('tabs.alternatives'),
     disabled: !hasResults.value,
     badge: hasResults.value ? pipeline.results.value.length : undefined,
   },
   {
     key: 'history',
-    label: 'Historique',
+    label: t('tabs.history'),
     badge: history.list.value.length || undefined,
   },
 ])
@@ -283,7 +285,7 @@ async function onWaypointMoved(index: number, pos: LatLng): Promise<void> {
     editedRoute.value = candidateToRoute(candidate)
   } catch (e) {
     if ((e as Error)?.name !== 'AbortError') {
-      editError.value = 'Impossible de re-router par ce point (zone non accessible ?).'
+      editError.value = t('edit.error')
     }
   } finally {
     editRerouting.value = false
@@ -344,7 +346,7 @@ watch(activeTab, (t) => {
 
 <template>
   <div class="relative h-dvh w-screen overflow-hidden bg-cream-50">
-    <h1 class="sr-only">RunGen — générateur de traces de running GPX</h1>
+    <h1 class="sr-only">{{ t('app.title') }}</h1>
     <!-- Carte plein écran — `z-0` + `isolate` isolent le stacking context
          Leaflet (panes 200/400/600/800) pour empêcher ses z-index internes
          de passer au-dessus du sheet et des FABs. -->
@@ -370,7 +372,7 @@ watch(activeTab, (t) => {
            sur desktop la sidebar flottante remplace ces raccourcis) -->
       <div v-if="!isDesktop" class="pointer-events-auto flex flex-col gap-2">
          <FloatingButton
-          label="Ouvrir les paramètres"
+          :label="t(`fab.openSettings`)"
           @click="(activeTab = 'settings'), (snap = 'full')"
         >
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -380,7 +382,7 @@ watch(activeTab, (t) => {
         </FloatingButton>
 
          <FloatingButton
-          label="Mode course à pied"
+          :label="t(`fab.runMode`)"
           :active="true"
         >
           <!-- Pictogramme coureur -->
@@ -398,7 +400,7 @@ watch(activeTab, (t) => {
 
          <FloatingButton
           v-if="hasResults"
-          label="Réinitialiser"
+          :label="t(`fab.reset`)"
           @click="onReset"
         >
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -416,7 +418,7 @@ watch(activeTab, (t) => {
       :style="fabClusterStyle"
     >
       <div class="pointer-events-auto flex flex-col gap-2">
-        <FloatingButton label="Recentrer la carte" @click="mapRef?.recenter()">
+        <FloatingButton :label="t(`fab.recenter`)" @click="mapRef?.recenter()">
           <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3" />
             <line x1="12" y1="2" x2="12" y2="5" />
@@ -425,13 +427,13 @@ watch(activeTab, (t) => {
             <line x1="19" y1="12" x2="22" y2="12" />
           </svg>
         </FloatingButton>
-        <FloatingButton label="Zoom avant" small @click="mapRef?.zoomIn()">
+        <FloatingButton :label="t(`fab.zoomIn`)" small @click="mapRef?.zoomIn()">
           <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </FloatingButton>
-        <FloatingButton label="Zoom arrière" small @click="mapRef?.zoomOut()">
+        <FloatingButton :label="t(`fab.zoomOut`)" small @click="mapRef?.zoomOut()">
           <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
@@ -462,21 +464,21 @@ watch(activeTab, (t) => {
           <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
         </svg>
         <span class="text-sm font-medium text-ink-900">
-          {{ editRerouting ? 'Re-calcul du tracé…' : 'Glisse les points pour ajuster' }}
+          {{ editRerouting ? t('edit.rerouting') : t('edit.drag') }}
         </span>
         <button
           type="button"
           class="rounded-pill px-3 py-1.5 text-xs font-semibold text-ink-500 transition hover:bg-cream-200"
           @click="exitEditMode(false)"
         >
-          Annuler
+          {{ t('edit.cancel') }}
         </button>
         <button
           type="button"
           class="rounded-pill bg-olive-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-olive-800"
           @click="exitEditMode(true)"
         >
-          Terminé
+          {{ t('edit.done') }}
         </button>
       </div>
     </div>
@@ -517,13 +519,13 @@ watch(activeTab, (t) => {
             style="animation-delay: 60ms"
           >
           <span class="pill-active">
-            {{ difficulty?.level }}
-            <span class="text-[10px] uppercase opacity-80">Difficulté</span>
+            {{ difficulty ? t(`difficulty.${difficulty.level}`) : '' }}
+            <span class="text-[10px] uppercase opacity-80">{{ t('details.difficulty') }}</span>
           </span>
           <button
             type="button"
             class="pill-muted"
-            aria-label="Changer l'allure de course"
+            :aria-label="t('details.changePace')"
             @click="cyclePace"
           >
             <svg
@@ -539,8 +541,8 @@ watch(activeTab, (t) => {
               <polyline points="7 10 12 5 17 10" />
               <polyline points="7 14 12 19 17 14" />
             </svg>
-            {{ formatPace(pace) }} min/km
-            <span class="text-[10px] uppercase opacity-60">Rythme</span>
+            {{ formatPace(pace) }} {{ t('units.minPerKm') }}
+            <span class="text-[10px] uppercase opacity-60">{{ t('details.pace') }}</span>
           </button>
           <button
             type="button"
@@ -563,7 +565,7 @@ watch(activeTab, (t) => {
               <polyline points="7 23 3 19 7 15" />
               <path d="M21 13v2a4 4 0 0 1-4 4H3" />
             </svg>
-            Sens inversé
+            {{ t('details.reverse') }}
           </button>
           <button type="button" class="pill-muted" @click="enterEditMode">
             <svg
@@ -579,7 +581,7 @@ watch(activeTab, (t) => {
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
             </svg>
-              Ajuster le tracé
+              {{ t('details.edit') }}
             </button>
           </div>
 
@@ -648,13 +650,13 @@ watch(activeTab, (t) => {
         v-else-if="pipeline.quotaWarning.value"
         class="mt-4 rounded-card bg-cream-100 px-4 py-3 text-xs text-ink-700"
       >
-        Quota ORS partiellement consommé — les candidats restants ont été utilisés.
+        {{ t('warnings.quotaPartial') }}
       </div>
       <div
         v-if="pipeline.distanceToleranceRelaxed.value"
         class="mt-2 rounded-card bg-cream-100 px-4 py-3 text-xs text-terracotta-600"
       >
-        Aucun candidat dans la plage de distance demandée — les meilleurs hors gabarit sont retournés.
+        {{ t('warnings.toleranceRelaxed') }}
       </div>
 
       <!-- CTA Générer rendu dans le footer du sheet (toujours visible sur l'onglet Paramètres) -->
@@ -670,10 +672,10 @@ watch(activeTab, (t) => {
               <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" />
               <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
             </svg>
-            Génération en cours…
+            {{ t('control.generating') }}
           </span>
           <span v-else class="inline-flex items-center gap-2">
-            Générer le parcours
+            {{ t('control.generate') }}
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />

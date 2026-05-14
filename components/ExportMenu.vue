@@ -9,6 +9,7 @@
  */
 import { onBeforeUnmount, ref } from 'vue'
 import { useGpxExport } from '../composables/useGpxExport'
+import { useI18n } from '../composables/useI18n'
 import { buildShareUrl } from '../utils/share-url'
 import type { AnalyzedRoute, GenerationParams } from '../types'
 
@@ -19,6 +20,7 @@ const props = defineProps<{
 }>()
 
 const { exportRoute, shareRoute } = useGpxExport()
+const { t } = useI18n()
 
 const open = ref(false)
 const busy = ref(false)
@@ -65,8 +67,8 @@ async function sendTo(target: 'komoot' | 'strava'): Promise<void> {
     window.open(IMPORT_URLS[target], '_blank', 'noopener')
     hint.value =
       target === 'strava'
-        ? 'GPX téléchargé — importe-le dans l’onglet Strava ouvert.'
-        : 'GPX téléchargé — importe-le dans Komoot (onglet ouvert).'
+        ? t('export.importHintStrava')
+        : t('export.importHintKomoot')
   } finally {
     busy.value = false
   }
@@ -82,7 +84,7 @@ async function onCopyLink(): Promise<void> {
   const url = buildShareUrl(props.params)
   try {
     await navigator.clipboard.writeText(url)
-    hint.value = 'Lien copié — il rouvre l’app avec ces paramètres.'
+    hint.value = t('export.linkCopied')
   } catch {
     // clipboard indisponible (contexte non sécurisé) → on affiche le lien.
     hint.value = url
@@ -114,7 +116,7 @@ async function onCopyLink(): Promise<void> {
         <polyline points="7 10 12 15 17 10" />
         <line x1="12" y1="15" x2="12" y2="3" />
       </svg>
-      <span>Enregistrer</span>
+      <span>{{ t('export.save') }}</span>
       <svg
         viewBox="0 0 24 24"
         class="h-3.5 w-3.5 transition-transform"
@@ -158,7 +160,7 @@ async function onCopyLink(): Promise<void> {
           </span>
           <span class="flex-1">
             <span class="block text-sm font-semibold text-ink-900">Komoot</span>
-            <span class="block text-xs text-ink-500">Via le partage système</span>
+            <span class="block text-xs text-ink-500">{{ t('export.viaShare') }}</span>
           </span>
         </button>
 
@@ -176,7 +178,7 @@ async function onCopyLink(): Promise<void> {
           </span>
           <span class="flex-1">
             <span class="block text-sm font-semibold text-ink-900">Strava</span>
-            <span class="block text-xs text-ink-500">Via le partage système</span>
+            <span class="block text-xs text-ink-500">{{ t('export.viaShare') }}</span>
           </span>
         </button>
 
@@ -205,8 +207,8 @@ async function onCopyLink(): Promise<void> {
             </svg>
           </span>
           <span class="flex-1">
-            <span class="block text-sm font-semibold text-ink-900">Télécharger le GPX</span>
-            <span class="block text-xs text-ink-500">Fichier .gpx (Strava, Komoot, montre…)</span>
+            <span class="block text-sm font-semibold text-ink-900">{{ t('export.downloadGpx') }}</span>
+            <span class="block text-xs text-ink-500">{{ t('export.downloadGpxSub') }}</span>
           </span>
         </button>
 
@@ -233,8 +235,8 @@ async function onCopyLink(): Promise<void> {
             </svg>
           </span>
           <span class="flex-1">
-            <span class="block text-sm font-semibold text-ink-900">Copier le lien</span>
-            <span class="block text-xs text-ink-500">Rouvre l’app avec ces paramètres</span>
+            <span class="block text-sm font-semibold text-ink-900">{{ t('export.copyLink') }}</span>
+            <span class="block text-xs text-ink-500">{{ t('export.copyLinkSub') }}</span>
           </span>
         </button>
 

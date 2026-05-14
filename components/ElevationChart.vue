@@ -6,9 +6,11 @@
  */
 import { computed } from 'vue'
 import { useElevationProfile } from '../composables/useElevationProfile'
+import { useI18n } from '../composables/useI18n'
 import type { RoutePoint } from '../types/ors'
 
 const props = defineProps<{ points: RoutePoint[] }>()
+const { t } = useI18n()
 
 const profile = computed(() => useElevationProfile().build(props.points))
 
@@ -69,13 +71,13 @@ const path = computed<Computed>(() => {
 <template>
   <div>
     <header class="mb-2 flex items-center justify-between">
-      <h3 class="text-base font-bold text-ink-900">Élévation</h3>
+      <h3 class="text-base font-bold text-ink-900">{{ t('elevation.title') }}</h3>
     </header>
     <svg
       :viewBox="`0 0 ${VIEW_W} ${VIEW_H}`"
       class="h-auto w-full"
       role="img"
-      aria-label="Profil altimétrique du parcours"
+      :aria-label="t('elevation.title')"
     >
       <defs>
         <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">

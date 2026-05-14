@@ -5,6 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { PATH_COLORS } from '../config'
+import { useI18n } from '../composables/useI18n'
 import type { TerrainStats } from '../types/osm'
 
 // N'est rendu par la page que lorsque l'analyse de terrain a réussi.
@@ -13,6 +14,8 @@ const props = defineProps<{
   /** Distance totale du parcours en mètres, pour estimer chaque part. */
   distanceM: number
 }>()
+
+const { t } = useI18n()
 
 const open = ref(true)
 // Les barres partent à 0 puis croissent jusqu'à leur largeur cible (transition CSS).
@@ -28,10 +31,10 @@ interface Row {
 
 const rows = computed<Row[]>(() =>
   [
-    { key: 'route', label: 'Route', ratio: props.terrain.route, color: PATH_COLORS.route },
-    { key: 'chemin_large', label: 'Chemin', ratio: props.terrain.chemin_large, color: PATH_COLORS.chemin_large },
-    { key: 'single', label: 'Single track', ratio: props.terrain.single, color: PATH_COLORS.single },
-    { key: 'unknown', label: 'Inconnu', ratio: props.terrain.unknown, color: PATH_COLORS.unknown },
+    { key: 'route', label: t('terrain.route'), ratio: props.terrain.route, color: PATH_COLORS.route },
+    { key: 'chemin_large', label: t('terrain.chemin_large'), ratio: props.terrain.chemin_large, color: PATH_COLORS.chemin_large },
+    { key: 'single', label: t('terrain.single'), ratio: props.terrain.single, color: PATH_COLORS.single },
+    { key: 'unknown', label: t('terrain.unknown'), ratio: props.terrain.unknown, color: PATH_COLORS.unknown },
   ].filter((r) => r.ratio > 0.001),
 )
 
@@ -61,7 +64,7 @@ function distLabel(ratio: number): string {
       >
         <polyline points="6 9 12 15 18 9" />
       </svg>
-      <h3 class="text-base font-bold text-ink-900">Types de voies</h3>
+      <h3 class="text-base font-bold text-ink-900">{{ t('terrain.title') }}</h3>
     </button>
 
     <div v-show="open" class="space-y-3 pt-1">
@@ -95,7 +98,7 @@ function distLabel(ratio: number): string {
 
       <p v-if="terrain.forest > 0" class="text-sm text-ink-700">
         <span class="inline-block h-2 w-2 align-middle rounded-pill bg-sage-600" />
-        <span class="ml-2 align-middle font-semibold text-olive-900">Portions en forêt :</span>
+        <span class="ml-2 align-middle font-semibold text-olive-900">{{ t('terrain.forest') }}</span>
         <span class="ml-1 tabular-nums">{{ distLabel(terrain.forest) }}</span>
       </p>
     </div>

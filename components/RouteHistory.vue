@@ -3,6 +3,7 @@
  * Onglet « Historique » : liste des parcours générés récemment (localStorage).
  * Cliquer une entrée la réaffiche sur la carte sans reconsommer de quota ORS.
  */
+import { useI18n } from '../composables/useI18n'
 import type { RouteHistoryEntry } from '../types'
 
 const props = defineProps<{
@@ -18,13 +19,10 @@ const emit = defineEmits<{
   (e: 'clear'): void
 }>()
 
+const { t, formatDate } = useI18n()
+
 function fmtDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatDate(ts)
 }
 
 function fmtDuration(distanceM: number): string {
@@ -38,19 +36,19 @@ function fmtDuration(distanceM: number): string {
 <template>
   <section>
     <div class="mb-3 flex items-center justify-between">
-      <h3 class="text-base font-bold text-ink-900">Historique</h3>
+      <h3 class="text-base font-bold text-ink-900">{{ t('history.title') }}</h3>
       <button
         v-if="entries.length"
         type="button"
         class="text-xs font-medium text-ink-500 hover:text-terracotta-600"
         @click="emit('clear')"
       >
-        Tout effacer
+        {{ t('history.clearAll') }}
       </button>
     </div>
 
     <p v-if="!entries.length" class="rounded-card bg-cream-100 px-4 py-6 text-center text-sm text-ink-500">
-      Aucun parcours généré pour l'instant. Tes prochains parcours apparaîtront ici.
+      {{ t('history.empty') }}
     </p>
 
     <ul v-else class="space-y-2">
@@ -79,19 +77,19 @@ function fmtDuration(distanceM: number): string {
               <span class="text-xs text-ink-500">km</span>
               <span class="mx-2 text-ink-300">•</span>
               <span class="text-lg font-bold tabular-nums">{{ Math.round(entry.elevationGainM) }}</span>
-              <span class="text-xs text-ink-500">m D+</span>
+              <span class="text-xs text-ink-500">{{ t('alternatives.dPlus') }}</span>
             </p>
             <p class="mt-0.5 text-xs text-ink-500">
               {{ fmtDate(entry.ts) }} · ~{{ fmtDuration(entry.distanceM) }}
               <span v-if="entry.terrain">
-                · Route {{ Math.round(entry.terrain.route * 100) }}%
+                · {{ t('terrain.route') }} {{ Math.round(entry.terrain.route * 100) }}%
               </span>
             </p>
           </button>
           <button
             type="button"
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-pill text-ink-400 transition hover:bg-cream-200 hover:text-terracotta-600"
-            :aria-label="`Supprimer le parcours du ${fmtDate(entry.ts)}`"
+            :aria-label="t('history.remove', { date: fmtDate(entry.ts) })"
             @click="emit('remove', entry.id)"
           >
             <svg

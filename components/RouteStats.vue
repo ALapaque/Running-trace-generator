@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useCountUp } from '../composables/useCountUp'
+import { useI18n } from '../composables/useI18n'
 import type { AnalyzedRoute } from '../types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   route: AnalyzedRoute
@@ -30,7 +33,7 @@ const timeLabel = computed(() =>
         <span class="text-stat tabular-nums">{{ distanceKm.toFixed(2) }}</span>
         <span class="text-unit text-ink-500">km</span>
       </p>
-      <p class="mt-1 text-label text-ink-500">Distance</p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.distance') }}</p>
     </div>
 
     <div class="flex flex-col items-start">
@@ -40,7 +43,7 @@ const timeLabel = computed(() =>
         <span v-if="hh > 0" class="text-stat-sm tabular-nums">{{ mm.toString().padStart(2, '0') }}</span>
         <span v-if="hh > 0" class="text-unit text-ink-500">m</span>
       </p>
-      <p class="mt-1 text-label text-ink-500">Temps estimé</p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.time') }}</p>
     </div>
 
     <div class="flex flex-col items-start">
@@ -48,7 +51,7 @@ const timeLabel = computed(() =>
         <span class="text-stat tabular-nums">{{ Math.round(gainM) }}</span>
         <span class="text-unit text-ink-500">m</span>
       </p>
-      <p class="mt-1 text-label text-ink-500">Dénivelé</p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.gain') }}</p>
     </div>
 
     <div class="flex flex-col items-start">
@@ -56,7 +59,7 @@ const timeLabel = computed(() =>
         <span class="text-stat tabular-nums">{{ Math.round(lossM) }}</span>
         <span class="text-unit text-ink-500">m</span>
       </p>
-      <p class="mt-1 text-label text-ink-500">Dén. nég.</p>
+      <p class="mt-1 text-label text-ink-500">{{ t('stats.loss') }}</p>
     </div>
 
     <span class="sr-only">{{ timeLabel }}</span>

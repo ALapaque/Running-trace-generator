@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '../composables/useI18n'
 import type { AnalyzedRoute } from '../types'
 
 const props = defineProps<{
@@ -8,6 +9,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'select', id: string): void }>()
 
+const { t } = useI18n()
+
 function fmtKm(m: number): string {
   return (m / 1000).toFixed(1)
 }
@@ -15,8 +18,8 @@ function fmtKm(m: number): string {
 
 <template>
   <section>
-    <h3 class="mb-3 text-base font-bold text-ink-900">Alternatives</h3>
-    <ul class="space-y-2" role="listbox" aria-label="Alternatives de parcours">
+    <h3 class="mb-3 text-base font-bold text-ink-900">{{ t('alternatives.title') }}</h3>
+    <ul class="space-y-2" role="listbox" :aria-label="t('alternatives.listLabel')">
       <li
         v-for="(r, idx) in props.routes"
         :key="r.id"
@@ -50,16 +53,15 @@ function fmtKm(m: number): string {
               <span class="text-xs text-ink-500">km</span>
               <span class="mx-2 text-ink-300">•</span>
               <span class="text-lg font-bold tabular-nums">{{ Math.round(r.elevationGainM) }}</span>
-              <span class="text-xs text-ink-500">m D+</span>
+              <span class="text-xs text-ink-500">{{ t('alternatives.dPlus') }}</span>
             </p>
             <p class="mt-0.5 text-xs text-ink-500">
-              Route {{ Math.round(r.terrain.route * 100) }}%
-              · Chemin {{ Math.round(r.terrain.chemin_large * 100) }}%
-              · Single {{ Math.round(r.terrain.single * 100) }}%
-              <span v-if="r.terrain.forest > 0">· Forêt {{ Math.round(r.terrain.forest * 100) }}%</span>
+              {{ t('terrain.route') }} {{ Math.round(r.terrain.route * 100) }}%
+              · {{ t('terrain.chemin_large') }} {{ Math.round(r.terrain.chemin_large * 100) }}%
+              · {{ t('terrain.single') }} {{ Math.round(r.terrain.single * 100) }}%
             </p>
           </div>
-          <span class="font-mono text-[11px] text-ink-400">score {{ r.score.toFixed(2) }}</span>
+          <span class="font-mono text-[11px] text-ink-400">{{ t('alternatives.score') }} {{ r.score.toFixed(2) }}</span>
         </button>
       </li>
     </ul>

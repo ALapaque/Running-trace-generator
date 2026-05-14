@@ -13,17 +13,18 @@ import {
   DEFAULT_RESULTS_COUNT,
   DISTANCE_BOUNDS_KM,
   ELEVATION_BOUNDS_M,
-  HILL_LABELS,
   RESULTS_COUNT_OPTIONS,
-  TERRAIN_LABELS,
   type ResultsCount,
 } from '../config'
 import { useGeocoding, type GeocodeResult } from '../composables/useGeocoding'
 import { useGeolocation } from '../composables/useGeolocation'
+import { LOCALES, useI18n } from '../composables/useI18n'
 import { readJson, writeJson } from '../utils/storage'
 import RangeSlider from './RangeSlider.vue'
 import type { GenerationParams } from '../types'
 import type { LatLng, RouteGenerationInput } from '../types/ors'
+
+const { t, locale, setLocale } = useI18n()
 
 export interface ControlPanelSubmit extends RouteGenerationInput {
   resultsCount: ResultsCount
@@ -109,7 +110,7 @@ async function useCurrentPosition(): Promise<void> {
   try {
     const pos = await geo.request()
     emit('pickStart', pos)
-    geocodeQuery.value = 'Ma position'
+    geocodeQuery.value = t('control.myLocation')
     geocodeResults.value = []
   } catch {
     // L'erreur est exposée via geo.error et affichée dans le template.
@@ -181,7 +182,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
     <!-- Recherche adresse + ma position -->
     <section>
       <label for="address-search" class="text-label uppercase text-ink-500">
-        Point de départ
+        {{ t('control.start') }}
       </label>
       <div class="mt-1 flex gap-2">
         <div class="relative flex-1">
@@ -202,7 +203,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             id="address-search"
             v-model="geocodeQuery"
             type="text"
-            placeholder="Recherche une adresse"
+            :placeholder="t('control.searchPlaceholder')"
             class="w-full rounded-pill border border-cream-200 bg-cream-100 py-3 pl-10 pr-4 text-sm text-ink-900 placeholder:text-ink-500 focus:border-olive-900 focus:outline-none"
             autocomplete="off"
           />
@@ -211,7 +212,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           type="button"
           class="flex shrink-0 items-center justify-center rounded-pill border border-cream-200 bg-cream-100 px-3 text-olive-900 transition hover:bg-cream-200 active:scale-95 disabled:opacity-60"
           style="min-width: 44px; min-height: 44px;"
-          :aria-label="geo.loading.value ? 'Localisation en cours' : 'Utiliser ma position actuelle'"
+          :aria-label="geo.loading.value ? t('control.locating') : t('control.useLocation')"
           :aria-busy="geo.loading.value || undefined"
           :disabled="geo.loading.value"
           @click="useCurrentPosition"
@@ -263,7 +264,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
       <p v-if="geo.error.value" class="mt-2 text-xs text-terracotta-600" role="alert">
         {{ geo.error.value }}
       </p>
-      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">Recherche en cours…</p>
+      <p v-else-if="geocoding" class="mt-1 text-xs text-ink-400">{{ t('control.searching') }}</p>
     </section>
 
     <!-- Distance (plage, optionnelle) -->
@@ -275,7 +276,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
             <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
           </span>
-          <span class="text-label uppercase text-ink-500">Distance</span>
+          <span class="text-label uppercase text-ink-500">{{ t('control.distance') }}</span>
         </label>
         <p v-if="form.useDistance" class="flex items-baseline gap-1">
           <span class="text-stat-sm tabular-nums">{{ form.distanceKm.min.toFixed(1) }}</span>
@@ -283,7 +284,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           <span class="text-stat-sm tabular-nums">{{ form.distanceKm.max.toFixed(1) }}</span>
           <span class="text-unit text-ink-500">km</span>
         </p>
-        <span v-else class="text-xs text-ink-400">Non contrainte</span>
+        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedF') }}</span>
       </div>
       <RangeSlider
         v-show="form.useDistance"
@@ -292,7 +293,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         :min="DISTANCE_BOUNDS_KM.min"
         :max="DISTANCE_BOUNDS_KM.max"
         :step="DISTANCE_BOUNDS_KM.step"
-        aria-label="Distance"
+        :aria-label="t('control.distance')"
         unit="km"
       />
     </section>
@@ -306,7 +307,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
             <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
             <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
           </span>
-          <span class="text-label uppercase text-ink-500">Dénivelé positif</span>
+          <span class="text-label uppercase text-ink-500">{{ t('control.elevation') }}</span>
         </label>
         <p v-if="form.useElevation" class="flex items-baseline gap-1">
           <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.min }}</span>
@@ -314,7 +315,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           <span class="text-stat-sm tabular-nums">{{ form.elevationGainM.max }}</span>
           <span class="text-unit text-ink-500">m</span>
         </p>
-        <span v-else class="text-xs text-ink-400">Non contraint</span>
+        <span v-else class="text-xs text-ink-400">{{ t('control.unconstrainedM') }}</span>
       </div>
       <RangeSlider
         v-show="form.useElevation"
@@ -323,19 +324,23 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         :min="ELEVATION_BOUNDS_M.min"
         :max="ELEVATION_BOUNDS_M.max"
         :step="ELEVATION_BOUNDS_M.step"
-        aria-label="Dénivelé positif"
+        :aria-label="t('control.elevation')"
         unit="m"
       />
     </section>
 
     <p v-if="!form.useDistance && !form.useElevation" class="text-xs text-terracotta-600">
-      Active au moins la distance ou le dénivelé pour générer un parcours.
+      {{ t('control.atLeastOne') }}
     </p>
 
     <!-- Type de chemin -->
     <section>
-      <span class="text-label uppercase text-ink-500">Type de chemin</span>
-      <div class="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Type de chemin">
+      <span class="text-label uppercase text-ink-500">{{ t('control.pathType') }}</span>
+      <div
+        class="mt-2 flex flex-wrap gap-2"
+        role="radiogroup"
+        :aria-label="t('control.pathType')"
+      >
         <button
           v-for="opt in terrainOptions"
           :key="opt"
@@ -345,7 +350,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           :class="form.terrain === opt ? 'pill-active' : 'pill-muted'"
           @click="form.terrain = opt"
         >
-          {{ TERRAIN_LABELS[opt] }}
+          {{ t(`terrainPref.${opt}`) }}
         </button>
       </div>
     </section>
@@ -353,7 +358,7 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
     <!-- Forêt -->
     <section>
       <label class="flex cursor-pointer items-center justify-between gap-3 rounded-card bg-cream-100 px-4 py-3">
-        <span class="text-sm font-medium text-ink-900">Privilégier les portions en forêt</span>
+        <span class="text-sm font-medium text-ink-900">{{ t('control.preferForest') }}</span>
         <span class="relative inline-flex h-6 w-11 shrink-0 items-center">
           <input
             v-model="form.preferForest"
@@ -370,8 +375,12 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
 
     <!-- Côtes -->
     <section>
-      <span class="text-label uppercase text-ink-500">Type de côte</span>
-      <div class="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Type de côte">
+      <span class="text-label uppercase text-ink-500">{{ t('control.hillType') }}</span>
+      <div
+        class="mt-2 flex flex-wrap gap-2"
+        role="radiogroup"
+        :aria-label="t('control.hillType')"
+      >
         <button
           v-for="opt in hillOptions"
           :key="opt"
@@ -381,15 +390,19 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           :class="form.hills === opt ? 'pill-active' : 'pill-muted'"
           @click="form.hills = opt"
         >
-          {{ HILL_LABELS[opt] }}
+          {{ t(`hillPref.${opt}`) }}
         </button>
       </div>
     </section>
 
     <!-- Nombre d'alternatives -->
     <section>
-      <span class="text-label uppercase text-ink-500">Alternatives à proposer</span>
-      <div class="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Nombre d'alternatives">
+      <span class="text-label uppercase text-ink-500">{{ t('control.alternativesCount') }}</span>
+      <div
+        class="mt-2 flex flex-wrap gap-2"
+        role="radiogroup"
+        :aria-label="t('control.alternativesCount')"
+      >
         <button
           v-for="n in RESULTS_COUNT_OPTIONS"
           :key="n"
@@ -403,8 +416,26 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
         </button>
       </div>
       <p v-if="form.resultsCount >= 10" class="mt-2 text-xs text-ink-500">
-        Plus d'alternatives = plus de requêtes ORS consommées (~13 par génération).
+        {{ t('control.quotaWarning') }}
       </p>
+    </section>
+
+    <!-- Langue -->
+    <section>
+      <span class="text-label uppercase text-ink-500">{{ t('lang.label') }}</span>
+      <div class="mt-2 flex gap-2" role="radiogroup" :aria-label="t('lang.label')">
+        <button
+          v-for="l in LOCALES"
+          :key="l"
+          type="button"
+          role="radio"
+          :aria-checked="locale === l"
+          :class="locale === l ? 'pill-active' : 'pill-muted'"
+          @click="setLocale(l)"
+        >
+          {{ l.toUpperCase() }}
+        </button>
+      </div>
     </section>
 
     <!-- CTA Générer : rendu par la page dans le footer du BottomSheet

@@ -8,6 +8,7 @@
  * - HTTPS requis par le navigateur (vrai sur Vercel, et sur localhost en dev)
  */
 import { ref } from 'vue'
+import { useI18n } from './useI18n'
 import type { LatLng } from '../types/ors'
 
 export interface GeolocationState {
@@ -17,6 +18,7 @@ export interface GeolocationState {
 }
 
 export function useGeolocation() {
+  const { t } = useI18n()
   const loading = ref(false)
   const error = ref<string | null>(null)
   const position = ref<LatLng | null>(null)
@@ -26,7 +28,7 @@ export function useGeolocation() {
     loading.value = true
     return new Promise<LatLng>((resolve, reject) => {
       if (typeof navigator === 'undefined' || !navigator.geolocation) {
-        const msg = 'Géolocalisation non supportée par ce navigateur'
+        const msg = t('geo.unsupported')
         error.value = msg
         loading.value = false
         reject(new Error(msg))
@@ -41,13 +43,13 @@ export function useGeolocation() {
         },
         (err) => {
           loading.value = false
-          let msg = 'Erreur de géolocalisation'
+          let msg = t('geo.error')
           if (err.code === err.PERMISSION_DENIED) {
-            msg = 'Permission refusée. Active la géolocalisation dans ton navigateur.'
+            msg = t('geo.denied')
           } else if (err.code === err.POSITION_UNAVAILABLE) {
-            msg = 'Position indisponible (signal GPS faible ?).'
+            msg = t('geo.unavailable')
           } else if (err.code === err.TIMEOUT) {
-            msg = 'La localisation a pris trop de temps. Réessaye.'
+            msg = t('geo.timeout')
           }
           error.value = msg
           reject(new Error(msg))

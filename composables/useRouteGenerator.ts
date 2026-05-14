@@ -8,6 +8,7 @@
 
 import { haversineM } from '../utils/geo'
 import { fetchWithTimeout } from '../utils/fetch-timeout'
+import { useI18n } from './useI18n'
 import {
   DEFAULT_DISTANCE_SPAN_KM,
   ELEVATION_NOISE_M,
@@ -183,6 +184,7 @@ export function computeElevationGainLoss(points: RoutePoint[]): {
 
 export function useRouteGenerator() {
   const config = useRuntimeConfig()
+  const { t } = useI18n()
 
   /** Lance N appels ORS en parallèle avec des seeds différents. Retourne uniquement les succès. */
   async function generateCandidates(
@@ -193,9 +195,7 @@ export function useRouteGenerator() {
     const apiKey = config.public.orsApiKey
     // En mode proxy, la clé est côté serveur ; sinon elle est requise côté client.
     if (!isProxied(baseUrl) && !apiKey) {
-      throw new Error(
-        "Clé OpenRouteService manquante : définir NUXT_PUBLIC_ORS_API_KEY dans .env",
-      )
+      throw new Error(t("errors.orsKeyMissing"))
     }
     const orsConfig = { baseUrl, apiKey }
     const count = options.count ?? ORS_CANDIDATES
@@ -251,7 +251,7 @@ export function useRouteGenerator() {
     const baseUrl = config.public.orsBaseUrl
     const apiKey = config.public.orsApiKey
     if (!isProxied(baseUrl) && !apiKey) {
-      throw new Error("Clé OpenRouteService manquante : définir NUXT_PUBLIC_ORS_API_KEY dans .env")
+      throw new Error(t("errors.orsKeyMissing"))
     }
     if (waypoints.length < 2) throw new Error('Au moins 2 points sont nécessaires')
     const orsConfig = { baseUrl, apiKey }

@@ -7,6 +7,7 @@ import { ref } from 'vue'
 import { OrsQuotaExceededError, useRouteGenerator } from './useRouteGenerator'
 import { useTerrainAnalyzer } from './useTerrainAnalyzer'
 import { useScoring } from './useScoring'
+import { useI18n } from './useI18n'
 import {
   DEFAULT_RESULTS_COUNT,
   DISTANCE_TOLERANCE_ABS_MIN_M,
@@ -48,6 +49,7 @@ export function inRange(
 }
 
 export function useRoutePipeline() {
+  const { t } = useI18n()
   const stage = ref<PipelineStage>('idle')
   const progress = ref(0)
   const errorMessage = ref<string | null>(null)
@@ -127,12 +129,11 @@ export function useRoutePipeline() {
     } catch (e) {
       stage.value = 'error'
       if (e instanceof OrsQuotaExceededError) {
-        errorMessage.value =
-          'Quota OpenRouteService dépassé pour aujourd\'hui. Réessayez demain ou utilisez une autre clé.'
+        errorMessage.value = t('errors.orsQuota')
       } else if (e instanceof Error) {
         errorMessage.value = e.message
       } else {
-        errorMessage.value = 'Erreur inconnue'
+        errorMessage.value = t('errors.unknown')
       }
       throw e
     }

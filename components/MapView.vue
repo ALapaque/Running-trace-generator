@@ -13,6 +13,9 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import type { LatLng } from '../types/ors'
 import type { AnalyzedRoute } from '../types'
 import { PATH_COLORS, ROUTE_DEFAULT_COLOR } from '../config'
+import { useI18n } from '../composables/useI18n'
+
+const { t } = useI18n()
 
 const props = withDefaults(
   defineProps<{
@@ -332,5 +335,5 @@ defineExpose({ recenter, zoomIn, zoomOut })
 </script>
 
 <template>
-  <div ref="mapEl" class="h-full w-full" role="application" aria-label="Carte interactive du parcours" />
+  <div ref="mapEl" class="h-full w-full" role="application" :aria-label="t('map.label')" />
 </template>

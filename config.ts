@@ -4,7 +4,7 @@
  */
 
 import type { PathType } from './types/osm'
-import type { TerrainPreference, HillPreference } from './types/ors'
+import type { HillPreference } from './types/ors'
 
 export interface ScoringWeights {
   /** Écart relatif distance cible vs distance réelle. */
@@ -160,17 +160,4 @@ export const HILL_PROFILES: Record<HillPreference, HillProfile> = {
       return Math.max(0, 0.8 - concentration)
     },
   },
-}
-
-export const TERRAIN_LABELS: Record<TerrainPreference, string> = {
-  route: 'Route',
-  chemin_large: 'Chemin large',
-  single: 'Single track',
-  mixte: 'Mixte',
-}
-
-export const HILL_LABELS: Record<HillPreference, string> = {
-  plat: 'Plat',
-  vallonné: 'Vallonné',
-  montagneux: 'Montagneux',
 }
