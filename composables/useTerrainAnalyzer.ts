@@ -19,6 +19,7 @@ import {
   classifyPathType,
   findNearestWaySegment,
   isPointInForest,
+  smoothPathTypes,
 } from '../utils/spatial-matching'
 import { getCachedOverpass, setCachedOverpass } from '../utils/bbox-cache'
 import { createLimiter } from '../utils/concurrency'
@@ -206,7 +207,7 @@ function classifySegments(
   decimated: RoutePoint[],
   index: ReturnType<typeof buildIndex>,
 ): SegmentClassification[] {
-  return decimated.map((p, i) => {
+  const raw = decimated.map((p, i) => {
     const point = { lat: p.lat, lng: p.lng }
     const nearest = findNearestWaySegment(index, point, MATCH_MAX_DISTANCE_M)
     const inForest = isPointInForest(index, point)
@@ -222,4 +223,8 @@ function classifySegments(
       tags: nearest.tags as Record<string, string>,
     }
   })
+
+  // Lissage : efface les classifications isolées aberrantes (intersections).
+  const smoothed = smoothPathTypes(raw.map((s) => s.pathType))
+  return raw.map((s, i) => ({ ...s, pathType: smoothed[i]! }))
 }

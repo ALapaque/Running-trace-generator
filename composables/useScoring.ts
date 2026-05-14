@@ -11,6 +11,7 @@
  */
 
 import { HILL_PROFILES, SCORING_WEIGHTS } from '../config'
+import { climbConcentration } from '../utils/climbs'
 import type { AnalyzedRoute } from '../types'
 import type { TerrainStats } from '../types/osm'
 import type { HillPreference, RouteCandidate, RouteGenerationInput, TerrainPreference } from '../types/ors'
@@ -22,31 +23,12 @@ interface AnalyzedInput {
   fallback: boolean
 }
 
-/** Concentration du D+ ∈ [0, 1] : coefficient de variation des montées par tronçon. */
+/**
+ * Concentration du D+ ∈ [0, 1], basée sur la détection des montées réelles
+ * (part du D+ contenue dans la plus grosse montée). Voir `utils/climbs.ts`.
+ */
 export function computeClimbConcentration(candidate: RouteCandidate): number {
-  const pts = candidate.points
-  if (pts.length < 10) return 0.5
-  // On découpe en 10 tronçons de longueur égale et on calcule le D+ de chacun.
-  const buckets = 10
-  const bucketSize = Math.floor(pts.length / buckets)
-  const gains: number[] = []
-  for (let b = 0; b < buckets; b++) {
-    const start = b * bucketSize
-    const end = b === buckets - 1 ? pts.length : start + bucketSize
-    let g = 0
-    for (let i = start + 1; i < end; i++) {
-      const delta = pts[i]!.ele - pts[i - 1]!.ele
-      if (delta > 0) g += delta
-    }
-    gains.push(g)
-  }
-  const mean = gains.reduce((a, b) => a + b, 0) / gains.length
-  if (mean === 0) return 0
-  const variance =
-    gains.reduce((s, g) => s + (g - mean) ** 2, 0) / gains.length
-  const stdDev = Math.sqrt(variance)
-  const cv = stdDev / mean // coefficient de variation
-  return Math.max(0, Math.min(1, cv / 2)) // borne à [0, 1]
+  return climbConcentration(candidate.points)
 }
 
 function terrainShare(stats: TerrainStats, pref: TerrainPreference): number {

@@ -11,23 +11,33 @@ function makeFlatCandidate(distanceM: number, points = 100): RouteCandidate {
   return { id: 'flat', seed: 1, points: pts, distanceM, elevationGainM: 0, elevationLossM: 0 }
 }
 
-function makeHillyCandidate(distanceM: number, gain: number, concentrated = false): RouteCandidate {
+/**
+ * Candidat avec un profil d'altitude au choix :
+ *  - 'single'  : une seule grosse montée (concentration ~1, montagneux)
+ *  - 'rolling' : plusieurs montées séparées de descentes (concentration basse, vallonné)
+ */
+function makeHillyCandidate(
+  distanceM: number,
+  gain: number,
+  shape: 'single' | 'rolling' = 'single',
+): RouteCandidate {
   const pts: RoutePoint[] = []
   const n = 100
   for (let i = 0; i < n; i++) {
     let ele = 100
-    if (concentrated) {
-      // Tout le gain est sur le quart milieu
+    if (shape === 'single') {
+      // Tout le gain dans le quart milieu.
       if (i >= 40 && i < 60) ele = 100 + ((i - 40) / 20) * gain
       else if (i >= 60) ele = 100 + gain
     } else {
-      // Gain réparti
-      ele = 100 + (i / (n - 1)) * gain
+      // 5 cycles montée/descente → ~5 montées distinctes.
+      const cycle = Math.sin((i / n) * Math.PI * 2 * 5)
+      ele = 100 + ((cycle + 1) / 2) * (gain / 2)
     }
     pts.push({ lat: 50 + i * 0.0001, lng: 4, ele, distance: (i * distanceM) / (n - 1) })
   }
   return {
-    id: concentrated ? 'concentrated' : 'spread',
+    id: shape,
     seed: 2,
     points: pts,
     distanceM,
@@ -185,14 +195,14 @@ describe('useScoring.rank', () => {
 })
 
 describe('computeClimbConcentration', () => {
-  it('renvoie une concentration plus haute pour un D+ concentré', () => {
-    const concentrated = computeClimbConcentration(makeHillyCandidate(10_000, 300, true))
-    const spread = computeClimbConcentration(makeHillyCandidate(10_000, 300, false))
-    expect(concentrated).toBeGreaterThan(spread)
+  it('renvoie une concentration plus haute pour une montée unique que pour un profil vallonné', () => {
+    const single = computeClimbConcentration(makeHillyCandidate(10_000, 300, 'single'))
+    const rolling = computeClimbConcentration(makeHillyCandidate(10_000, 300, 'rolling'))
+    expect(single).toBeGreaterThan(rolling)
   })
 
   it('reste borné dans [0, 1]', () => {
-    const v = computeClimbConcentration(makeHillyCandidate(10_000, 300, true))
+    const v = computeClimbConcentration(makeHillyCandidate(10_000, 300, 'single'))
     expect(v).toBeGreaterThanOrEqual(0)
     expect(v).toBeLessThanOrEqual(1)
   })
