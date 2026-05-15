@@ -41,6 +41,9 @@ export function encodeParams(params: GenerationParams): string {
     m: params.mode,
     h: params.hills,
     n: params.resultsCount,
+    // Présent uniquement si activé — un payload plus court à coût nul pour
+    // les liens « running standard » et les liens v2 antérieurs.
+    ...(params.preferGreenway ? { g: 1 } : {}),
   }
   return `${HASH_KEY}=${base64UrlEncode(JSON.stringify(payload))}`
 }
@@ -118,5 +121,6 @@ function sanitize(p: Record<string, unknown>): GenerationParams | null {
     mode,
     hills,
     resultsCount,
+    preferGreenway: p.g === 1 || p.g === true,
   }
 }

@@ -158,7 +158,12 @@ export function useBrouterRouter() {
       return { candidates, fallback: true }
     }
 
-    const profile = mapBrouterProfile(input.hills)
+    // Running + preferGreenway : on force `trekking` (la seule variante boostée
+    // RAVeL côté serveur, cf. server/lib/brouter-greenway.ts) plutôt que de
+    // suivre la mapping `hills → profil`.
+    const profile = input.preferGreenway
+      ? 'trekking'
+      : mapBrouterProfile(input.hills)
     let fallback = false
 
     // Chaque tâche se résout toujours (jamais de rejet) → pas de rejet non géré.

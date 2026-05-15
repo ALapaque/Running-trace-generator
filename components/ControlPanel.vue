@@ -44,6 +44,8 @@ interface FormState {
   elevationTargetM: number
   hills: RouteGenerationInput['hills']
   resultsCount: ResultsCount
+  /** Running uniquement : router via BRouter+profil custom RAVeL/voies vertes. */
+  preferGreenway: boolean
 }
 
 // v2 : `terrain` + `preferForest` remplacés par `mode` (running / trail).
@@ -62,6 +64,7 @@ function defaultForm(): FormState {
     elevationTargetM: 200,
     hills: 'vallonné',
     resultsCount: DEFAULT_RESULTS_COUNT,
+    preferGreenway: false,
   }
 }
 
@@ -83,6 +86,7 @@ function formFromParams(p: GenerationParams): FormState {
     elevationTargetM: eExact ? p.elevationGainM!.min : base.elevationTargetM,
     hills: p.hills,
     resultsCount: (p.resultsCount as ResultsCount) ?? base.resultsCount,
+    preferGreenway: !!p.preferGreenway,
   }
 }
 
@@ -207,6 +211,7 @@ function onSubmit(): void {
     mode: form.mode,
     hills: form.hills,
     resultsCount: form.resultsCount,
+    preferGreenway: form.mode === 'running' ? form.preferGreenway : false,
   })
 }
 
@@ -330,6 +335,22 @@ const hillOptions: RouteGenerationInput['hills'][] = ['plat', 'vallonné', 'mont
           </span>
         </button>
       </div>
+
+      <!-- Running uniquement : opt-in re-routage BRouter vers les voies cyclables. -->
+      <label
+        v-if="form.mode === 'running'"
+        class="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-card bg-cream-100 px-4 py-3 ring-1 ring-cream-300"
+      >
+        <span class="flex flex-col">
+          <span class="text-sm font-semibold text-ink-900">{{ t('control.preferGreenway') }}</span>
+          <span class="text-xs text-ink-500">{{ t('control.preferGreenwaySub') }}</span>
+        </span>
+        <span class="relative inline-flex h-5 w-9 shrink-0 items-center">
+          <input v-model="form.preferGreenway" type="checkbox" class="peer sr-only" />
+          <span class="absolute inset-0 rounded-pill bg-cream-300 transition peer-checked:bg-olive-900" />
+          <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-pill bg-cream-100 shadow-card transition-transform peer-checked:translate-x-4" />
+        </span>
+      </label>
     </section>
 
     <!-- Réglages : départ, contraintes et préférences regroupés dans une

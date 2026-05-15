@@ -71,6 +71,8 @@ export const fr = {
     alternativesCount: 'Alternatives à proposer',
     quotaWarning:
       "Plus d'alternatives = plus de requêtes ORS consommées (~13 par génération).",
+    preferGreenway: 'Privilégier les voies cyclables',
+    preferGreenwaySub: 'Détours via RAVeL et voies vertes quand possible.',
     generate: 'Générer le parcours',
     generating: 'Génération en cours…',
   },
@@ -248,6 +250,8 @@ export const en: typeof fr = {
     hillType: 'Hill profile',
     alternativesCount: 'Alternatives to propose',
     quotaWarning: 'More alternatives = more ORS requests used (~13 per generation).',
+    preferGreenway: 'Prefer cycle paths',
+    preferGreenwaySub: 'Detour via greenways and cycle networks when possible.',
     generate: 'Generate route',
     generating: 'Generating…',
   },
