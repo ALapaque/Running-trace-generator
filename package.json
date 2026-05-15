@@ -2,7 +2,7 @@
   "name": "running-trace-generator",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Générateur de traces de running GPX (round-trip, sans backend)",
   "scripts": {
     "build": "nuxt build",
