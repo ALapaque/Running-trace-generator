@@ -122,6 +122,7 @@ export const fr = {
 
   update: {
     available: 'Mise à jour disponible',
+    description: 'Une nouvelle version de RunGen est prête.',
     cta: 'Mettre à jour',
     dismiss: 'Plus tard',
   },
@@ -298,6 +299,7 @@ export const en: typeof fr = {
 
   update: {
     available: 'Update available',
+    description: 'A new version of RunGen is ready.',
     cta: 'Update',
     dismiss: 'Later',
   },
