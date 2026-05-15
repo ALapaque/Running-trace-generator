@@ -70,14 +70,15 @@ function circuitIsOpen(): boolean {
 }
 
 async function fetchOverpass(
-  url: string,
   query: string,
   signal?: AbortSignal,
 ): Promise<OverpassResponse> {
-  const res = await fetchWithTimeout(url, {
+  // Proxifié côté serveur (`/api/overpass/route`) : pas de CORS, et le
+  // basculement primaire → miroir kumi est fait serveur-side.
+  const res = await fetchWithTimeout('/api/overpass/route', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(query)}`,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
     timeoutMs: OVERPASS_FETCH_TIMEOUT_MS,
     externalSignal: signal,
   })
@@ -92,24 +93,6 @@ async function fetchOverpass(
     throw new OverpassError('Réponse Overpass malformée')
   }
   return json
-}
-
-async function fetchOverpassWithFallback(
-  primary: string,
-  fallback: string,
-  query: string,
-  signal?: AbortSignal,
-): Promise<OverpassResponse> {
-  try {
-    return await fetchOverpass(primary, query, signal)
-  } catch (e) {
-    // Annulation par l'appelant → on remonte (ne pas insister).
-    if ((e as Error)?.name === 'AbortError') throw e
-    // Tout le reste — OverpassError, TimeoutError, mais aussi `TypeError`
-    // (le navigateur peut bloquer une réponse Overpass sous charge qui sort
-    // une page HTML sans en-têtes CORS) → bascule sur le miroir kumi.
-    return await fetchOverpass(fallback, query, signal)
-  }
 }
 
 function computeStats(segments: SegmentClassification[]): TerrainStats {
@@ -147,18 +130,11 @@ function fallbackSegments(decimated: RoutePoint[]): SegmentClassification[] {
 }
 
 export function useTerrainAnalyzer() {
-  const config = useRuntimeConfig()
-
   async function fetchTerrain(bbox: BBox, signal?: AbortSignal): Promise<OverpassResponse> {
     const cached = getCachedOverpass(bbox)
     if (cached) return cached
     const query = buildOverpassQuery(bbox)
-    const response = await fetchOverpassWithFallback(
-      config.public.overpassBaseUrl,
-      config.public.overpassFallbackUrl,
-      query,
-      signal,
-    )
+    const response = await fetchOverpass(query, signal)
     setCachedOverpass(bbox, response)
     return response
   }
