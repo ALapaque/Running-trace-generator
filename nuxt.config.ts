@@ -9,7 +9,16 @@ export default defineNuxtConfig({
       title: 'RunGen — Générateur de traces GPX',
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        {
+          name: 'viewport',
+          // `maximum-scale=1` + `user-scalable=no` empêche le pinch-zoom global
+          // (l'app reste verrouillée à scale=1 — le scroll horizontal accidentel
+          // après pinch sur mobile est très perturbant). `viewport-fit=cover`
+          // permet aux `env(safe-area-inset-*)` de fonctionner sur les iPhone à
+          // notch (utilisé p.ex. dans `UpdateBanner.vue`).
+          content:
+            'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
+        },
         {
           name: 'description',
           content:
