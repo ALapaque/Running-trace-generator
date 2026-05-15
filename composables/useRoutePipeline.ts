@@ -91,10 +91,14 @@ export function useRoutePipeline() {
       quotaWarning.value = quotaExceeded
       progress.value = input.mode === 'trail' ? 0.2 : 0.35
 
-      // Mode trail : on re-route chaque boucle ORS via BRouter pour qu'elle
-      // suive réellement les sentiers. Échec → on garde les candidats ORS.
+      // Re-routage BRouter :
+      //  - mode trail : systématique (suit les sentiers natifs) ;
+      //  - mode running + `preferGreenway` : opt-in (re-route via profil
+      //    custom « greenway » pour privilégier RAVeL / voies cyclables).
+      // Échec → on garde les candidats ORS (le pipeline n'est jamais cassé).
       let candidates = orsCandidates
-      if (input.mode === 'trail') {
+      const useBrouter = input.mode === 'trail' || (input.mode === 'running' && !!input.preferGreenway)
+      if (useBrouter) {
         const reroute = await rerouteCandidates(orsCandidates, input, signal)
         candidates = reroute.candidates
         brouterFallback.value = reroute.fallback

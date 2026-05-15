@@ -28,6 +28,12 @@ export interface RouteGenerationInput {
   /** Running (route) ou Trail (sentiers & forêt). Pilote profil ORS + scoring. */
   mode: RouteMode
   hills: HillPreference
+  /**
+   * Mode running uniquement : re-route les candidats ORS via BRouter avec un
+   * profil custom « greenway » qui privilégie RAVeL, voies vertes et pistes
+   * cyclables revêtues. Sans effet en mode trail (qui appelle déjà BRouter).
+   */
+  preferGreenway?: boolean
 }
 
 /** Paramètres bruts envoyés à ORS. */

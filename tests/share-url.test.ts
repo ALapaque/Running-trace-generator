@@ -68,4 +68,16 @@ describe('encodeParams / decodeParamsFromHash', () => {
     const hash = `#other=1&${encodeParams(baseParams)}&z=2`
     expect(decodeParamsFromHash(hash)).not.toBeNull()
   })
+
+  it('encode et préserve `preferGreenway`', () => {
+    const hash = `#${encodeParams({ ...baseParams, preferGreenway: true })}`
+    const decoded = decodeParamsFromHash(hash)
+    expect(decoded!.preferGreenway).toBe(true)
+  })
+
+  it('absent → preferGreenway défaut à false (rétrocompat)', () => {
+    const hash = `#${encodeParams(baseParams)}`
+    const decoded = decodeParamsFromHash(hash)
+    expect(decoded!.preferGreenway).toBe(false)
+  })
 })
