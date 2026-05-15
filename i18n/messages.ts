@@ -120,6 +120,12 @@ export const fr = {
     scoring: 'Sélection des meilleurs candidats…',
   },
 
+  update: {
+    available: 'Mise à jour disponible',
+    cta: 'Mettre à jour',
+    dismiss: 'Plus tard',
+  },
+
   edit: {
     drag: 'Glisse les points pour ajuster',
     rerouting: 'Re-calcul du tracé…',
@@ -288,6 +294,12 @@ export const en: typeof fr = {
     generating: 'Generating route…',
     analyzing: 'Analysing terrain…',
     scoring: 'Selecting the best candidates…',
+  },
+
+  update: {
+    available: 'Update available',
+    cta: 'Update',
+    dismiss: 'Later',
   },
 
   edit: {
