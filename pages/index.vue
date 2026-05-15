@@ -20,6 +20,7 @@ import FlagIcon from '../components/FlagIcon.vue'
 import FloatingButton from '../components/FloatingButton.vue'
 import FloatingPanel from '../components/FloatingPanel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
+import UpdateBanner from '../components/UpdateBanner.vue'
 import MapLegend from '../components/MapLegend.vue'
 import MapView from '../components/MapView.vue'
 import RouteAlternatives from '../components/RouteAlternatives.vue'
@@ -460,6 +461,9 @@ watch(selectedRoute, () => {
 
     <!-- Loading overlay (toast en haut) -->
     <LoadingOverlay :stage="pipeline.stage.value" :progress="pipeline.progress.value" />
+
+    <!-- Bannière de mise à jour (nouvelle version déployée) -->
+    <UpdateBanner />
 
     <!-- Barre d'édition du tracé (mode édition) -->
     <div
