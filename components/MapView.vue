@@ -132,6 +132,10 @@ onMounted(async () => {
   map = L.map(mapEl.value, {
     zoomControl: false,
     attributionControl: true,
+    // Mobile : le double-tap zoom Leaflet se déclenche au moindre tap rapide
+    // (par ex. en faisant glisser le marqueur de départ). Désactivé sur touch ;
+    // sur desktop on garde le double-clic comme accélérateur de zoom.
+    doubleClickZoom: !('ontouchstart' in window),
   }).setView([initial.lat, initial.lng], 13)
 
   // CartoDB Voyager — clair, OSM data, parcs verts / eau bleue (ton outdoor).
