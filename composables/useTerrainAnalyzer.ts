@@ -103,11 +103,12 @@ async function fetchOverpassWithFallback(
   try {
     return await fetchOverpass(primary, query, signal)
   } catch (e) {
-    // Bascule sur le miroir kumi en cas d'échec réseau/timeout/throttle.
-    if (e instanceof OverpassError || (e as Error)?.name === 'TimeoutError') {
-      return await fetchOverpass(fallback, query, signal)
-    }
-    throw e
+    // Annulation par l'appelant → on remonte (ne pas insister).
+    if ((e as Error)?.name === 'AbortError') throw e
+    // Tout le reste — OverpassError, TimeoutError, mais aussi `TypeError`
+    // (le navigateur peut bloquer une réponse Overpass sous charge qui sort
+    // une page HTML sans en-têtes CORS) → bascule sur le miroir kumi.
+    return await fetchOverpass(fallback, query, signal)
   }
 }
 
