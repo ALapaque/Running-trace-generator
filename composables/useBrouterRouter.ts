@@ -19,6 +19,7 @@ import {
   BROUTER_CIRCUIT_THRESHOLD,
   BROUTER_FETCH_TIMEOUT_MS,
   BROUTER_MAX_CONCURRENT,
+  BROUTER_MAX_DISTANCE_DRIFT,
   BROUTER_WAYPOINTS_PER_LOOP,
 } from '../config'
 import type {
@@ -173,6 +174,15 @@ export function useBrouterRouter() {
           try {
             const refined = await rerouteCandidate(c, profile, signal)
             recordSuccess()
+            // Garde-fou : un BRouter trop divergent (typiquement quand il
+            // accroche une cycleroute lointaine entre 2 waypoints et fait une
+            // boucle de 20+ km sur une cible de 8 km) → on garde l'ORS d'origine.
+            // Pas un échec de service → pas de `fallback = true` (silencieux).
+            const drift =
+              Math.abs(refined.distanceM - c.distanceM) / Math.max(c.distanceM, 1)
+            if (drift > BROUTER_MAX_DISTANCE_DRIFT) {
+              return c
+            }
             return refined
           } catch (e) {
             // Une annulation ne compte pas comme un échec de service.

@@ -135,6 +135,13 @@ export const BROUTER_FETCH_TIMEOUT_MS = 24_000
 export const BROUTER_MAX_CONCURRENT = 2
 export const BROUTER_CIRCUIT_THRESHOLD = 2
 export const BROUTER_CIRCUIT_COOLDOWN_MS = 60_000
+/**
+ * Garde-fou anti blow-up : si la distance retournée par BRouter dévie de plus
+ * de ce ratio (relatif au candidat ORS), on conserve le candidat ORS d'origine.
+ * Évite les boucles aberrantes de 20+ km générées sur une cible de 8–10 km
+ * quand BRouter accroche une cycleroute lointaine entre deux waypoints.
+ */
+export const BROUTER_MAX_DISTANCE_DRIFT = 0.25
 
 /** TTL du cache Overpass dans localStorage, en millisecondes (24h). */
 export const OVERPASS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
