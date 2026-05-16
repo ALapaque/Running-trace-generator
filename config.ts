@@ -65,6 +65,13 @@ export const ORS_OVER_REQUEST_RATIO = 1.0
  */
 export const DISTANCE_TOLERANCE_RATIO = 0.075 // ±7.5 %
 export const DISTANCE_TOLERANCE_ABS_MIN_M = 500
+/**
+ * Cap dur appliqué quand la tolérance de distance est relâchée (pas assez de
+ * candidats stricts). Un candidat plus de ce ratio au-dessus/dessous du milieu
+ * de la plage demandée n'est jamais affiché, même en fallback — évite qu'on
+ * propose 15 km pour une demande à 10 km (ORS round_trip sur-livre parfois).
+ */
+export const DISTANCE_HARD_CAP_RATIO = 0.25 // ±25 %
 export const ELEVATION_TOLERANCE_RATIO = 0.15 // ±15 % (SRTM bruité)
 export const ELEVATION_TOLERANCE_ABS_MIN_M = 50
 

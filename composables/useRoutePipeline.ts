@@ -11,6 +11,7 @@ import { useScoring } from './useScoring'
 import { useI18n } from './useI18n'
 import {
   DEFAULT_RESULTS_COUNT,
+  DISTANCE_HARD_CAP_RATIO,
   DISTANCE_TOLERANCE_ABS_MIN_M,
   DISTANCE_TOLERANCE_RATIO,
   ELEVATION_TOLERANCE_ABS_MIN_M,
@@ -121,7 +122,8 @@ export function useRoutePipeline() {
       // Filtrage par les plages actives (distance et/ou dénivelé) avant scoring.
       // Une plage `null` n'est pas contraignante. La plage est élargie d'une
       // petite tolérance (ORS sur-livre parfois, SRTM est bruité). Si trop peu
-      // de candidats passent, on relâche la contrainte.
+      // de candidats passent, on relâche — mais on garde un cap dur pour ne
+      // jamais afficher un 15 km quand on en demande 10.
       const within = analyses.filter(
         (a) =>
           inRange(
@@ -137,7 +139,34 @@ export function useRoutePipeline() {
             ELEVATION_TOLERANCE_ABS_MIN_M,
           ),
       )
-      const usable = within.length >= Math.min(resultsCount, 3) ? within : analyses
+
+      let usable = within
+      if (within.length < Math.min(resultsCount, 3)) {
+        // Mode relâché. Si une plage de distance était demandée, on garde un
+        // cap dur (par défaut ±DISTANCE_HARD_CAP_RATIO autour du milieu de la
+        // plage) et on trie par proximité de la cible — sinon un candidat
+        // 15 km peut être présenté pour une demande à 10 km, ce qui défie
+        // l'attente utilisateur même avec le warning « tolérance relâchée ».
+        if (input.distanceKm) {
+          const midM = ((input.distanceKm.min + input.distanceKm.max) / 2) * 1000
+          const hardLow = midM * (1 - DISTANCE_HARD_CAP_RATIO)
+          const hardHigh = midM * (1 + DISTANCE_HARD_CAP_RATIO)
+          const onTargetIsh = analyses
+            .filter(
+              (a) => a.candidate.distanceM >= hardLow && a.candidate.distanceM <= hardHigh,
+            )
+            .sort(
+              (x, y) =>
+                Math.abs(x.candidate.distanceM - midM) -
+                Math.abs(y.candidate.distanceM - midM),
+            )
+          // Si même au cap dur on n'a rien, on retombe sur l'analyse complète
+          // (cas extrême : aucune zone routable autour du point demandé).
+          usable = onTargetIsh.length > 0 ? onTargetIsh : analyses
+        } else {
+          usable = analyses
+        }
+      }
       distanceToleranceRelaxed.value = usable !== within
 
       const top = rank(usable, input, resultsCount)
