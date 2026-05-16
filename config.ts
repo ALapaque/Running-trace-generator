@@ -105,10 +105,13 @@ export const DEFAULT_ELEVATION_RANGE_M = { min: 100, max: 300 } as const
 
 /**
  * Span de distance exploré quand l'utilisateur ne contraint PAS la distance
- * (seul le dénivelé est demandé). ORS round-trip exige une longueur cible :
- * on répartit les candidats sur ce span pour obtenir des distances variées.
+ * (seul le dénivelé est demandé). On répartit les candidats sur ce span pour
+ * obtenir des longueurs variées — bornes alignées sur `DISTANCE_BOUNDS_KM`
+ * pour que, même en plaine, des boucles longues puissent cumuler un D+ ciblé
+ * (asker 1500 m de D+ sans contrainte de distance suppose qu'on accepte des
+ * 40-50 km de boucle).
  */
-export const DEFAULT_DISTANCE_SPAN_KM = { min: 5, max: 25 } as const
+export const DEFAULT_DISTANCE_SPAN_KM = { min: 3, max: 50 } as const
 
 /** Vitesse running par défaut pour estimer le temps (min/km). */
 export const PACE_MIN_PER_KM = 6
