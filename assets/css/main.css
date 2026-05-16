@@ -16,6 +16,10 @@ body {
   @apply bg-cream-50 text-ink-900 antialiased;
   font-feature-settings: 'cv11', 'ss01', 'tnum';
   overscroll-behavior-y: contain;
+  /* Coupe le double-tap-to-zoom natif des navigateurs mobiles sur l'UI.
+     Le pinch-zoom reste actif. `.leaflet-container` redéfinit son propre
+     `touch-action: none` pour garder ses gestes intacts. */
+  touch-action: manipulation;
 }
 
 /* Carte claire */
