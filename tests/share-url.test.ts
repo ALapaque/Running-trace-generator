@@ -54,13 +54,13 @@ describe('encodeParams / decodeParamsFromHash', () => {
   })
 
   it('borne les valeurs hors limites au décodage', () => {
-    // distance 999 km → clampée à 50 (DISTANCE_BOUNDS_KM.max)
+    // distance 9999 km → clampée à DISTANCE_BOUNDS_KM.max
     const hash = `#${encodeParams({
       ...baseParams,
-      distanceKm: { min: 1, max: 999 },
+      distanceKm: { min: 1, max: 9999 },
     })}`
     const decoded = decodeParamsFromHash(hash)
-    expect(decoded!.distanceKm!.max).toBeLessThanOrEqual(50)
+    expect(decoded!.distanceKm!.max).toBeLessThanOrEqual(300)
     expect(decoded!.distanceKm!.min).toBeGreaterThanOrEqual(3)
   })
 
