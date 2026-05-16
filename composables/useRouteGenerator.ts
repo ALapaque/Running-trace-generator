@@ -1,17 +1,30 @@
 /**
- * Génération de candidats round-trip via OpenRouteService.
+ * Génération de candidats round-trip.
  *
- * - 8 seeds différents en parallèle (configurable).
- * - Sur-demande +10% sur la distance car ORS sous-livre régulièrement.
- * - Retourne `RouteCandidate[]` ; les erreurs individuelles n'invalident pas l'ensemble.
+ * On n'utilise PAS `ORS round_trip` : cet endpoint traite la longueur comme une
+ * suggestion (écarts pouvant dépasser 100 % dans certaines zones). À la place,
+ * on construit nous-mêmes un polygone régulier de waypoints autour du départ
+ * (orienté par le seed pour la variété), on le route via ORS *directions*
+ * (mature, prévisible), on mesure la distance et on redimensionne le polygone
+ * jusqu'à converger sur la cible (±8 % par défaut, 2-3 itérations max).
  */
 
 import { haversineM } from '../utils/geo'
 import { fetchWithTimeout } from '../utils/fetch-timeout'
+import {
+  bearingsFromSeed,
+  buildLoopWaypoints,
+  circumradiusForPerimeter,
+  rescaleRadius,
+} from '../utils/loop-generator'
 import { useI18n } from './useI18n'
 import {
   DEFAULT_DISTANCE_SPAN_KM,
   ELEVATION_NOISE_M,
+  LOOP_INITIAL_SHRINK,
+  LOOP_MAX_ITERATIONS,
+  LOOP_POLYGON_SIDES,
+  LOOP_TARGET_TOLERANCE,
   ORS_CANDIDATES,
   ORS_FETCH_TIMEOUT_MS,
   ORS_OVER_REQUEST_RATIO,
@@ -46,38 +59,21 @@ function mapProfile(mode: RouteMode): 'foot-hiking' | 'foot-walking' {
   return mode === 'trail' ? 'foot-hiking' : 'foot-walking'
 }
 
-function buildOrsBody(input: RouteGenerationInput, seed: number, lengthM: number) {
+/**
+ * Construit le body ORS directions pour une suite de waypoints. En mode trail
+ * on conserve le bias `green` (forêts/parcs/sentiers) — `profile_params` est
+ * supporté par l'endpoint directions au même titre que round_trip.
+ */
+function buildDirectionsBody(waypoints: LatLng[], mode: RouteMode) {
   return {
-    coordinates: [[input.start.lng, input.start.lat]],
+    coordinates: waypoints.map((w) => [w.lng, w.lat]),
     elevation: true,
     instructions: false,
     geometry: true,
-    options: {
-      round_trip: {
-        length: Math.round(lengthM),
-        points: 5,
-        seed,
-      },
-      // En mode trail, on biaise activement la génération vers les espaces
-      // verts (forêts, parcs, bords de rivière). En running, routing neutre.
-      ...(input.mode === 'trail'
-        ? { profile_params: { weightings: { green: TRAIL_GREEN_WEIGHT } } }
-        : {}),
-    },
+    ...(mode === 'trail'
+      ? { options: { profile_params: { weightings: { green: TRAIL_GREEN_WEIGHT } } } }
+      : {}),
   }
-}
-
-/**
- * Longueur (m) demandée à ORS pour le candidat `index` parmi `total`.
- * On répartit les cibles sur toute la plage [min, max] pour produire des
- * candidats de longueurs variées ; le scoring/filtre tri ensuite.
- * Si la distance n'est pas contrainte, on explore un span par défaut.
- */
-function targetLengthForIndex(input: RouteGenerationInput, index: number, total: number): number {
-  const span = input.distanceKm ?? DEFAULT_DISTANCE_SPAN_KM
-  const t = total <= 1 ? 0.5 : index / (total - 1)
-  const km = span.min + (span.max - span.min) * t
-  return km * 1000 * ORS_OVER_REQUEST_RATIO
 }
 
 interface OrsGeoJson {
@@ -152,17 +148,73 @@ function parseOrsResponse(data: OrsGeoJson, id: string, seed: number): RouteCand
   }
 }
 
-async function fetchOrsCandidate(
+/**
+ * Génère une boucle de longueur cible via la méthode polygone + itération.
+ * Renvoie la meilleure approximation obtenue dans LOOP_MAX_ITERATIONS appels
+ * (souvent 1-2 suffisent pour rentrer dans LOOP_TARGET_TOLERANCE).
+ */
+async function generateLoopCandidate(
   config: { baseUrl: string; apiKey: string },
   input: RouteGenerationInput,
   seed: number,
-  lengthM: number,
+  targetLengthM: number,
   signal?: AbortSignal,
 ): Promise<RouteCandidate> {
   const profile = mapProfile(input.mode)
-  const body = buildOrsBody(input, seed, lengthM)
-  const data = await postOrs(config, profile, body, signal)
-  return parseOrsResponse(data, `cand-${seed}`, seed)
+  const bearings = bearingsFromSeed(seed, LOOP_POLYGON_SIDES)
+  let radius =
+    circumradiusForPerimeter(targetLengthM, LOOP_POLYGON_SIDES) * LOOP_INITIAL_SHRINK
+
+  let best: RouteCandidate | null = null
+  let bestErrorRatio = Infinity
+  let lastError: unknown = null
+
+  for (let iter = 0; iter < LOOP_MAX_ITERATIONS; iter++) {
+    const waypoints = buildLoopWaypoints(input.start, bearings, radius)
+    const body = buildDirectionsBody(waypoints, input.mode)
+
+    let candidate: RouteCandidate
+    try {
+      const data = await postOrs(config, profile, body, signal)
+      candidate = parseOrsResponse(data, `cand-${seed}`, seed)
+    } catch (e) {
+      // Quota / erreur réseau : on remonte tel quel pour que l'appelant agrège.
+      if (e instanceof OrsQuotaExceededError) throw e
+      lastError = e
+      // Tentative de récupération : on rétrécit le polygone (un waypoint a pu
+      // tomber dans une zone non routable — mer, propriété privée, etc.).
+      radius *= 0.7
+      continue
+    }
+
+    const errorRatio = Math.abs(candidate.distanceM - targetLengthM) / targetLengthM
+    if (errorRatio < bestErrorRatio) {
+      best = candidate
+      bestErrorRatio = errorRatio
+    }
+    if (errorRatio <= LOOP_TARGET_TOLERANCE) break
+
+    radius = rescaleRadius(radius, candidate.distanceM, targetLengthM)
+  }
+
+  if (!best) {
+    if (lastError instanceof Error) throw lastError
+    throw new OrsApiError(500, 'Génération boucle : aucun candidat obtenu')
+  }
+  return best
+}
+
+/**
+ * Longueur (m) demandée pour le candidat `index` parmi `total`.
+ * On répartit les cibles sur toute la plage [min, max] pour produire des
+ * candidats de longueurs variées ; le scoring/filtre tri ensuite.
+ * Si la distance n'est pas contrainte, on explore un span par défaut.
+ */
+function targetLengthForIndex(input: RouteGenerationInput, index: number, total: number): number {
+  const span = input.distanceKm ?? DEFAULT_DISTANCE_SPAN_KM
+  const t = total <= 1 ? 0.5 : index / (total - 1)
+  const km = span.min + (span.max - span.min) * t
+  return km * 1000 * ORS_OVER_REQUEST_RATIO
 }
 
 /**
@@ -192,7 +244,7 @@ export function useRouteGenerator() {
   const config = useRuntimeConfig()
   const { t } = useI18n()
 
-  /** Lance N appels ORS en parallèle avec des seeds différents. Retourne uniquement les succès. */
+  /** Lance N appels en parallèle avec des seeds différents. Retourne uniquement les succès. */
   async function generateCandidates(
     input: RouteGenerationInput,
     options: { count?: number; signal?: AbortSignal } = {},
@@ -201,12 +253,13 @@ export function useRouteGenerator() {
     const apiKey = config.public.orsApiKey
     // En mode proxy, la clé est côté serveur ; sinon elle est requise côté client.
     if (!isProxied(baseUrl) && !apiKey) {
-      throw new Error(t("errors.orsKeyMissing"))
+      throw new Error(t('errors.orsKeyMissing'))
     }
     const orsConfig = { baseUrl, apiKey }
     const count = options.count ?? ORS_CANDIDATES
 
-    // Seeds pseudo-aléatoires distincts pour explorer différentes formes de boucle.
+    // Seeds pseudo-aléatoires distincts pour explorer différentes orientations
+    // de polygone (chaque seed → bearing offset différent dans `bearingsFromSeed`).
     const seeds: number[] = []
     while (seeds.length < count) {
       const s = Math.floor(Math.random() * 1_000_000)
@@ -215,7 +268,7 @@ export function useRouteGenerator() {
 
     const settled = await Promise.allSettled(
       seeds.map((seed, i) =>
-        fetchOrsCandidate(
+        generateLoopCandidate(
           orsConfig,
           input,
           seed,
@@ -257,7 +310,7 @@ export function useRouteGenerator() {
     const baseUrl = config.public.orsBaseUrl
     const apiKey = config.public.orsApiKey
     if (!isProxied(baseUrl) && !apiKey) {
-      throw new Error(t("errors.orsKeyMissing"))
+      throw new Error(t('errors.orsKeyMissing'))
     }
     if (waypoints.length < 2) throw new Error('Au moins 2 points sont nécessaires')
     const orsConfig = { baseUrl, apiKey }

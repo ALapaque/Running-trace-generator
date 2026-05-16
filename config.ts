@@ -37,6 +37,24 @@ export const ORS_CANDIDATES = 8
  */
 export const TRAIL_GREEN_WEIGHT = 0.8
 
+/**
+ * Génération de boucles maison (remplace ORS `round_trip`). On construit un
+ * N-gone régulier autour du départ puis on route via ORS *directions*, et on
+ * itère en redimensionnant le polygone jusqu'à converger sur la cible.
+ */
+/** Nombre de sommets du polygone. 5 (pentagone) = bon compromis variété/convergence. */
+export const LOOP_POLYGON_SIDES = 5
+/**
+ * Facteur initial appliqué au rayon « géométrique pur » — les segments routés
+ * sont plus longs que les chordes du polygone (routes contournent obstacles).
+ * 0.85 = on demande un polygone légèrement plus petit dès le départ.
+ */
+export const LOOP_INITIAL_SHRINK = 0.85
+/** Tolérance de convergence : si |actual - target| / target ≤ ça, on s'arrête. */
+export const LOOP_TARGET_TOLERANCE = 0.08
+/** Itérations max par candidat (1 = direct, 2-3 = correction itérative). */
+export const LOOP_MAX_ITERATIONS = 3
+
 /** Options proposées à l'utilisateur pour le nombre d'alternatives retournées. */
 export const RESULTS_COUNT_OPTIONS = [3, 5, 10] as const
 export type ResultsCount = (typeof RESULTS_COUNT_OPTIONS)[number]
