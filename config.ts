@@ -94,7 +94,7 @@ export const ELEVATION_TOLERANCE_RATIO = 0.15 // ±15 % (SRTM bruité)
 export const ELEVATION_TOLERANCE_ABS_MIN_M = 50
 
 /** Distance min/max acceptée par l'app, en km. */
-export const DISTANCE_BOUNDS_KM = { min: 3, max: 50, step: 0.5 } as const
+export const DISTANCE_BOUNDS_KM = { min: 3, max: 300, step: 0.5 } as const
 
 /** D+ min/max acceptée par l'app, en mètres. */
 export const ELEVATION_BOUNDS_M = { min: 0, max: 2000, step: 50 } as const
@@ -105,10 +105,12 @@ export const DEFAULT_ELEVATION_RANGE_M = { min: 100, max: 300 } as const
 
 /**
  * Span de distance exploré quand l'utilisateur ne contraint PAS la distance
- * (seul le dénivelé est demandé). ORS round-trip exige une longueur cible :
- * on répartit les candidats sur ce span pour obtenir des distances variées.
+ * (seul le dénivelé est demandé). On répartit les candidats sur ce span pour
+ * obtenir des longueurs variées. Plafond à 50 km : si l'utilisateur vise plus
+ * long (trail ultra), il fixe explicitement la plage de distance via le
+ * slider — on évite de générer 8 candidats à >100 km par défaut sans signal.
  */
-export const DEFAULT_DISTANCE_SPAN_KM = { min: 5, max: 25 } as const
+export const DEFAULT_DISTANCE_SPAN_KM = { min: 3, max: 50 } as const
 
 /** Vitesse running par défaut pour estimer le temps (min/km). */
 export const PACE_MIN_PER_KM = 6
