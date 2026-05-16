@@ -141,6 +141,7 @@ export function useRoutePipeline() {
       )
 
       let usable = within
+      let extremeMismatch = false
       if (within.length < Math.min(resultsCount, 3)) {
         // Mode relâché. Si une plage de distance était demandée, on garde un
         // cap dur (par défaut ±DISTANCE_HARD_CAP_RATIO autour du milieu de la
@@ -151,25 +152,31 @@ export function useRoutePipeline() {
           const midM = ((input.distanceKm.min + input.distanceKm.max) / 2) * 1000
           const hardLow = midM * (1 - DISTANCE_HARD_CAP_RATIO)
           const hardHigh = midM * (1 + DISTANCE_HARD_CAP_RATIO)
+          const distanceFromMid = (a: { candidate: { distanceM: number } }) =>
+            Math.abs(a.candidate.distanceM - midM)
           const onTargetIsh = analyses
             .filter(
               (a) => a.candidate.distanceM >= hardLow && a.candidate.distanceM <= hardHigh,
             )
-            .sort(
-              (x, y) =>
-                Math.abs(x.candidate.distanceM - midM) -
-                Math.abs(y.candidate.distanceM - midM),
-            )
-          // Si même au cap dur on n'a rien, on retombe sur l'analyse complète
-          // (cas extrême : aucune zone routable autour du point demandé).
-          usable = onTargetIsh.length > 0 ? onTargetIsh : analyses
+            .sort((x, y) => distanceFromMid(x) - distanceFromMid(y))
+          if (onTargetIsh.length > 0) {
+            usable = onTargetIsh
+          } else {
+            // Extrême : pas un seul candidat dans ±25%. On évite de noyer l'UI
+            // avec 5 alternatives toutes hors plage — on garde les 2 plus
+            // proches de la cible. Le warning « tolérance relâchée » s'affiche.
+            extremeMismatch = true
+            usable = [...analyses]
+              .sort((x, y) => distanceFromMid(x) - distanceFromMid(y))
+              .slice(0, Math.min(2, analyses.length))
+          }
         } else {
           usable = analyses
         }
       }
       distanceToleranceRelaxed.value = usable !== within
 
-      const top = rank(usable, input, resultsCount)
+      const top = rank(usable, input, extremeMismatch ? usable.length : resultsCount)
       results.value = top
       progress.value = 1
       stage.value = 'done'
